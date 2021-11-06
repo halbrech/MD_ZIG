@@ -34,11 +34,12 @@ pub const Particle = struct {
     pub fn update(self: *Particle, comptime isConservationFrame : bool) void {
         // const print = @import("std").debug.print;
 
+        self.v = self.v.scaledAdd(self.f, c.DELTA_TIME/self.m/2);
         // xₜ₊₁ = xₜ + vτ + ¹⁄₂aτ² + 𝒪(τ³),    a = ᶠ⁄ₘ
         self.x = self.x.scaledAdd(self.v, c.DELTA_TIME);
         self.x = self.x.scaledAdd(self.f, c.DELTA_TIME*c.DELTA_TIME / (2 * self.m));
         // vₜ₊₁ = vₜ + aτ + 𝒪(τ²),             a = ᶠ⁄ₘ
-        self.v = self.v.scaledAdd(self.f, c.DELTA_TIME/self.m);
+        self.v = self.v.scaledAdd(self.f, c.DELTA_TIME/self.m/2);
         if(isConservationFrame) {
             // Eₖᵢₙ = ¹⁄₂mv²
             currentEnergy += self.v.valueSquare()/2*self.m;
