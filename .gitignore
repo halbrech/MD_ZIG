@@ -1,0 +1,6 @@
+zig-cache/
+zig-out/
+.RData
+.Rhistory
+lj.csv
+sim.xyz

@@ -32,6 +32,8 @@ pub const Particle = struct {
     
 
     pub fn update(self: *Particle, comptime isConservationFrame : bool) void {
+        // const print = @import("std").debug.print;
+
         // xₜ₊₁ = xₜ + vτ + ¹⁄₂aτ² + 𝒪(τ³),    a = ᶠ⁄ₘ
         self.x = self.x.scaledAdd(self.v, c.DELTA_TIME);
         self.x = self.x.scaledAdd(self.f, c.DELTA_TIME*c.DELTA_TIME / (2 * self.m));
@@ -45,6 +47,7 @@ pub const Particle = struct {
             // l
             currentAngularMomentum = currentAngularMomentum.scaledAdd(self.v.cross(self.x),self.m);
         }
+        // print("New position: {} {} {}, force: {} {} {}, velocity: {} {} {}\n", .{self.x.x, self.x.y, self.x.z, self.f.x, self.f.y, self.f.z, self.v.x, self.v.y, self.v.z});
         self.f = Vec3{.x = 0, .y = 0, .z = 0};
     }
 };
