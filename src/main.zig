@@ -66,7 +66,7 @@ pub fn main() !void {
                 _ = try xyz.writer().print("Ar\t{}\t{}\t{}\n", .{part.x.x, part.x.y, part.x.z});
             }
 
-            // print("{}%\n", .{@floatToInt(u32, 100*@intToFloat(f32, i)/@intToFloat(f32, c.NUM_STEPS))});
+            print("{}%\n", .{@floatToInt(u32, 100*@intToFloat(f32, i)/@intToFloat(f32, c.NUM_STEPS))});
             // p.currentEnergy = 0;
             // p.currentMomentum = p.Vec3{.x = 0, .y = 0, .z = 0};
             // p.currentAngularMomentum = p.Vec3{.x = 0, .y = 0, .z = 0};
