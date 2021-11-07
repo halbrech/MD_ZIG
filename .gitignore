@@ -4,3 +4,5 @@ zig-out/
 .Rhistory
 lj.csv
 sim.xyz
+cachegrind.out.*
+callgrind.out.*

@@ -13,6 +13,6 @@ pub const BOX_HEIGHT : u32 = 50;
 pub const BOX_LENGTH: u32 = 50;
 pub const NUM_PARTICLES : u32 = 50;
 pub const DELTA_TIME : f32 = 1e-3;
-pub const NUM_STEPS : u32 = 10000000;
+pub const NUM_STEPS : u32 = 100000;
 
 pub const MASS = 1;
