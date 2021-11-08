@@ -1,5 +1,6 @@
 const std  = @import("std");
 
+
 /// Step used to convert from tabs to space
 const ConvertStep = struct {
     generated_file: std.build.GeneratedFile,
@@ -79,8 +80,12 @@ pub fn build(b: *std.build.Builder) void {
     const convert = ConvertStep.create(b, "src/main.zig");
 
     const exe = b.addExecutableSource("MD_ZIG", convert.getSource());
+    exe.addCSourceFile("lib/glad/src/glad.c", &[_][]const u8{"--std=c99", "-Ilib/glad/include"});
     exe.setTarget(target);
     exe.setBuildMode(mode);
+    exe.linkSystemLibrary("c");
+    exe.linkSystemLibrary("SDL2");
+    exe.linkSystemLibrary("GL");
     exe.install();
 
     const run_cmd = exe.run();

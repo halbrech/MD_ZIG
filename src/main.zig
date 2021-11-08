@@ -6,6 +6,8 @@ const c = @import("Constants.zig");
 
 const print = @import("std").debug.print;
 
+const gui = @import("gui.zig");
+
 pub fn initParticles(sys: *p.System) !void {
 	var prng = std.rand.DefaultPrng.init(blk: {
 		var seed: u64 = 0x8548294876937;
@@ -55,9 +57,17 @@ pub fn initSystem() !*p.System {
 
 
 pub fn main() !void {
+	try gui.init_gui();
+	const win = try gui.Window.create("Hello, World!", 800, 600);
+	
+	
+	win.show();
+	gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
+	gui.Window.clear();
+	win.swap();
+
 	// Simulation	
 	var sys = try initSystem();
-
 	
 	var i : u32 = 0;
 	var curr: u32 = 0;
