@@ -3,7 +3,7 @@ const p = @import("Particle.zig");
 const builtin = @import("builtin");
 const std = @import("std");
 const sphere = @import("sphere.zig");
-const sdl = @cImport ({
+pub const sdl = @cImport ({
     switch(builtin.os.tag) {
         .windows => {
             @cInclude("SDL.h");
@@ -86,7 +86,7 @@ pub const Window = struct {
 
         gl.glEnable(gl.GL_DEBUG_OUTPUT);
         gl.glDebugMessageCallback(glDebugMessageCallback, null);
-		gl.glEnable(gl.GL_CULL_FACE);
+		// gl.glEnable(gl.GL_CULL_FACE);
         gl.glEnable(gl.GL_DEPTH_TEST);
 		gl.glEnable(gl.GL_BLEND);
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA);
@@ -258,11 +258,12 @@ pub const Mesh = struct {
         return Mesh{ .VAO = vao, .VBO = vbo, .EBO = ebo, .shader = shader, .model = model, .size = i.len*3 };
     }
 
-    pub fn draw(self: *const Mesh) void {
+    pub fn draw(self: *const Mesh, view: *const Mat4) void {
         gl.glUseProgram(self.shader);
-        // gl.glUniformMatrix4fv(0, 1, gl.GL_FALSE, &self.model.a[0]);
+        gl.glUniformMatrix4fv(0, 1, gl.GL_TRUE, &self.model.a[0]);
+        gl.glUniformMatrix4fv(1, 1, gl.GL_TRUE, &view.a[0]);
         gl.glBindVertexArray(self.VAO);
-        print("Drawing {} vertices.\n", .{self.size});
+        //print("Drawing {} vertices.\n", .{self.size});
         gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
         gl.glBindVertexArray(0);
     }
@@ -293,14 +294,19 @@ pub const Mat4 = struct {
         };
     }
 
-    pub fn lookAt(pos: p.Vec3, up: p.Vec3, forward: p.Vec3) Mat4 {
+    pub fn lookAt(pos: p.Vec3, up: p.Vec3, look_at: p.Vec3) Mat4 {
         // const up = right.cross(forward);
-        const right = forward.cross(up);
+        var forward = pos.sub(look_at);
+        forward.normalize();
+        var right = up.cross(forward);
+        right.normalize();
+        // camUp = dir x (|up x dir|)
+        const cam_up = forward.cross(right);
         return Mat4{
             .a = [16]f32{
-                @floatCast(f32, right.x), @floatCast(f32, up.x), @floatCast(f32, forward.x), @floatCast(f32, pos.x),
-                @floatCast(f32, right.y), @floatCast(f32, up.y), @floatCast(f32, forward.y), @floatCast(f32, pos.y),
-                @floatCast(f32, right.z), @floatCast(f32, up.z), @floatCast(f32, forward.z), @floatCast(f32, pos.z),
+                @floatCast(f32, right.x), @floatCast(f32, right.y), @floatCast(f32, right.z), @floatCast(f32, -right.dot(pos)),
+                @floatCast(f32, cam_up.x),  @floatCast(f32, cam_up.y), @floatCast(f32, cam_up.z), @floatCast(f32, -cam_up.dot(pos)),
+                @floatCast(f32, forward.x), @floatCast(f32, forward.y), @floatCast(f32, forward.z), @floatCast(f32, -forward.dot(pos)), 
                 0.0,     0.0,  0.0,       1.0,
             },
         };

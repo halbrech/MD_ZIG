@@ -189,4 +189,11 @@ pub const Vec3 = packed struct {
 	pub fn cross(u: Vec3, v: Vec3) Vec3 {
 		return Vec3{.x = u.y * v.z - u.z * v.y, .y = u.z * v.x - u.x * v.z, .z = u.x * v.y - u.y * v.x};
 	}
+
+	pub fn normalize(u: *Vec3) void {
+		const len = 1.0/@sqrt(u.valueSquare());
+		u.x *= len;
+		u.y *= len;
+		u.z *= len;
+	}
 };

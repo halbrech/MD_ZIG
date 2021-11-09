@@ -56,81 +56,45 @@ pub fn initSystem() !*p.System {
     return sys;
 }
 
-pub fn main() !void {
-//    
-//    const b = std.crypto.random.intRangeAtMost(u32, 0, 4);
-//    const a = switch(b) {
-//        1 => "a",
-//        2 => "aa",
-//        3 => "aaa",
-//        4 => "aaaa",
-//        else => "",
-//    };
-//    _ = a;
-//    print("{}\n", .{b});
-//    print("{}\n", .{@TypeOf(.{switch(b) {
-//        1 => "a",
-//        2 => "aa",
-//        3 => "aaa",
-//        4 => "aaaa",
-//        else => "",
-//    }})});
-//    print("{}\n", .{@TypeOf(&(.{switch(b) {
-//        1 => "a",
-//        2 => "aa",
-//        3 => "aaa",
-//        4 => "aaaa",
-//        else => "",
-//    }}))});
-//    print("{}\n", .{@TypeOf((&(.{switch(b) {
-//        1 => "a",
-//        2 => "aa",
-//        3 => "aaa",
-//        4 => "aaaa",
-//        else => "",
-//    }})).*)});
-//
-//    if(b <= 4) return;
+pub fn exportData(sys: *p.System) !void {
+    // Data
+    const csv = try std.fs.cwd().createFile("lj.csv", .{ .read = true });
+    defer csv.close();
+    _ = try csv.write("t, E, px, py, pz, Lx, Ly, Lz\n");
 
-    try gui.init_gui();
-    defer gui.quit_gui();
-    const win = try gui.Window.create("Hello, World!", 800, 800);
+    const xyz = try std.fs.cwd().createFile("sim.xyz", .{ .read = true });
+    defer xyz.close();
 
-    win.show();
-    gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
-    gui.Window.clear();
-    win.swap();
+    for (sys.snapshots) |snsh, idx| {
+        var currentEnergy: f64 = 0;
+        var currentMomentum: p.Vec3 = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
+        var currentAngularMomentum: p.Vec3 = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
 
-    const model = gui.Mat4.identity();
-    const view = gui.Mat4.lookAt(p.Vec3{.x = -1.0, .y = 1.0, .z = 1.0}, p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0}, p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0});
-    _ = view;
-    const sh = try gui.Shader.create("shader.vert", "shader.frag");
+        _ = try xyz.writer().print("{}\n Snapshot {} (Frame {})\n", .{ c.NUM_PARTICLES + 8, idx, idx * 1000 });
+        var id: p.ID = 0;
+        // Mark the borders with hydrogen:
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, 0, 0 });
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, 0, c.BOX_HEIGHT });
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, c.BOX_WIDTH, 0 });
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, c.BOX_WIDTH, c.BOX_HEIGHT });
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, 0, 0 });
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, 0, c.BOX_HEIGHT });
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, c.BOX_WIDTH, 0 });
+        _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, c.BOX_WIDTH, c.BOX_HEIGHT });
+        while (id < c.NUM_PARTICLES) : (id = id + 1) {
+            _ = try xyz.writer().print("Ar\t{}\t{}\t{}\n", .{ snsh.pos[id].x, snsh.pos[id].y, snsh.pos[id].z });
 
-
-    const quad = try gui.Mesh.create(&[_]s.Vertex{
-        s.Vertex{ .pos = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 } },
-        s.Vertex{ .pos = p.Vec3{ .x = 0.5, .y = 0.0, .z = 0.0 } },
-        s.Vertex{ .pos = p.Vec3{ .x = 0.0, .y = 0.5, .z = 0.0 } },
-        s.Vertex{ .pos = p.Vec3{ .x = 0.5, .y = 0.5, .z = 0.0 } },
-    }, &[_]s.Triangle{
-        s.Triangle{ .v1 = 0, .v2 = 3, .v3 = 2 },
-        s.Triangle{ .v1 = 0, .v2 = 1, .v3 = 3 },
-    }, sh, model);
-    _ = quad;
-    const sphere_struct = s.sphere(3);
-
-    var sphere_data : sphere_struct = undefined;
-    sphere_data.init();
-    _ = sphere_struct;
-    const sphere_mesh = try gui.Mesh.create(&sphere_data.vertices, &sphere_data.indices, sh, model);
-    gui.Window.clear();
-    // quad.draw();
-    sphere_mesh.draw();
-    win.swap();
-
+            currentEnergy += snsh.vel[id].valueSquare() / (2.0 * sys.m[id]);
+            currentMomentum = currentMomentum.scaledAdd(snsh.vel[id], sys.m[id]);
+            currentAngularMomentum = currentAngularMomentum.scaledAdd(snsh.vel[id].cross(snsh.pos[id]), sys.m[id]);
+        }
+        currentEnergy += p.calcTotalPotential(snsh);
+        _ = try csv.writer().print("{}, {}, {}, {}, {}, {}, {}, {} \n", .{ @intToFloat(f64, idx * 1000) * c.DELTA_TIME, currentEnergy, currentMomentum.x, currentMomentum.y, currentMomentum.z, currentAngularMomentum.x, currentAngularMomentum.y, currentAngularMomentum.z });
+    }
+}
+pub fn runSimulation() !void {
     // Simulation
     var sys = try initSystem();
-
     var i: u32 = 0;
     var curr: u32 = 0;
     var t1 = std.time.nanoTimestamp();
@@ -155,43 +119,63 @@ pub fn main() !void {
     var t2 = std.time.nanoTimestamp();
     const data = @intCast(u64, c.NUM_STEPS) * @intCast(u64, @sizeOf(p.Frame));
     print("{}B in {}ms: {}GB/s\n", .{ data, @intToFloat(f64, t2 - t1) / 1000000.0, @intToFloat(f64, data) / @intToFloat(f64, t2 - t1) });
+}
 
-    const doExport: bool = false;
 
-    if (doExport) {
-        // Data
-        const csv = try std.fs.cwd().createFile("lj.csv", .{ .read = true });
-        defer csv.close();
-        _ = try csv.write("t, E, px, py, pz, Lx, Ly, Lz\n");
+pub fn main() !void {
+    try gui.init_gui();
+    defer gui.quit_gui();
+    
+    const win = try gui.Window.create("MD_ZIG", 800, 800);
 
-        const xyz = try std.fs.cwd().createFile("sim.xyz", .{ .read = true });
-        defer xyz.close();
+    win.show();
+    gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
+    // gui.Window.clear();
+    // win.swap();
 
-        for (sys.snapshots) |snsh, idx| {
-            var currentEnergy: f64 = 0;
-            var currentMomentum: p.Vec3 = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
-            var currentAngularMomentum: p.Vec3 = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
+    const model = gui.Mat4.identity();
 
-            _ = try xyz.writer().print("{}\n Snapshot {} (Frame {})\n", .{ c.NUM_PARTICLES + 8, idx, idx * 1000 });
-            var id: p.ID = 0;
-            // Mark the borders with hydrogen:
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, 0, 0 });
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, 0, c.BOX_HEIGHT });
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, c.BOX_WIDTH, 0 });
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ 0, c.BOX_WIDTH, c.BOX_HEIGHT });
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, 0, 0 });
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, 0, c.BOX_HEIGHT });
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, c.BOX_WIDTH, 0 });
-            _ = try xyz.writer().print("H\t{}\t{}\t{}\n", .{ c.BOX_LENGTH, c.BOX_WIDTH, c.BOX_HEIGHT });
-            while (id < c.NUM_PARTICLES) : (id = id + 1) {
-                _ = try xyz.writer().print("Ar\t{}\t{}\t{}\n", .{ snsh.pos[id].x, snsh.pos[id].y, snsh.pos[id].z });
+    var pos = p.Vec3{.x = 1.0, .y = 0.0, .z = 0.0}; // pos
+    var up = p.Vec3{.x = 0.0, .y = 0.0, .z = 1.0};  // up
+    var look_at = p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0}; // forward
+    var view = gui.Mat4.lookAt(pos, up, look_at);
+    const sh = try gui.Shader.create("shader.vert", "shader.frag");
 
-                currentEnergy += snsh.vel[id].valueSquare() / (2.0 * sys.m[id]);
-                currentMomentum = currentMomentum.scaledAdd(snsh.vel[id], sys.m[id]);
-                currentAngularMomentum = currentAngularMomentum.scaledAdd(snsh.vel[id].cross(snsh.pos[id]), sys.m[id]);
+
+    const sphere_struct = s.sphere(4);
+
+    var sphere_data : sphere_struct = undefined;
+    sphere_data.init();
+    _ = sphere_struct;
+    const sphere_mesh = try gui.Mesh.create(&sphere_data.vertices, &sphere_data.indices, sh, model);
+    // gui.Window.clear();
+    // sphere_mesh.draw();
+    // win.swap();
+
+
+    var ev: gui.sdl.SDL_Event = undefined;
+    // print("{}", .{@typeInfo(gui.sdl.SDL_Event)});
+    // main loop
+    main_loop: while (true) {
+        // window event loop
+        while (gui.sdl.SDL_PollEvent(&ev) != 0) {
+            switch(ev.type) {
+                gui.sdl.SDL_QUIT => {
+                    break :main_loop;
+                },
+                gui.sdl.SDL_WINDOWEVENT => {
+                    if(ev.window.type == gui.sdl.SDL_WINDOWEVENT_CLOSE) {
+                        break :main_loop;
+                    }
+                },
+                else => {}
             }
-            currentEnergy += p.calcTotalPotential(snsh);
-            _ = try csv.writer().print("{}, {}, {}, {}, {}, {}, {}, {} \n", .{ @intToFloat(f64, idx * 1000) * c.DELTA_TIME, currentEnergy, currentMomentum.x, currentMomentum.y, currentMomentum.z, currentAngularMomentum.x, currentAngularMomentum.y, currentAngularMomentum.z });
         }
+
+        gui.Window.clear();
+        sphere_mesh.draw(&view);
+        win.swap();
+        pos.z += 0.005;
+        view = gui.Mat4.lookAt(pos, up, look_at);
     }
 }
