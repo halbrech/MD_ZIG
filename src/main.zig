@@ -57,9 +57,44 @@ pub fn initSystem() !*p.System {
 }
 
 pub fn main() !void {
+//    
+//    const b = std.crypto.random.intRangeAtMost(u32, 0, 4);
+//    const a = switch(b) {
+//        1 => "a",
+//        2 => "aa",
+//        3 => "aaa",
+//        4 => "aaaa",
+//        else => "",
+//    };
+//    _ = a;
+//    print("{}\n", .{b});
+//    print("{}\n", .{@TypeOf(.{switch(b) {
+//        1 => "a",
+//        2 => "aa",
+//        3 => "aaa",
+//        4 => "aaaa",
+//        else => "",
+//    }})});
+//    print("{}\n", .{@TypeOf(&(.{switch(b) {
+//        1 => "a",
+//        2 => "aa",
+//        3 => "aaa",
+//        4 => "aaaa",
+//        else => "",
+//    }}))});
+//    print("{}\n", .{@TypeOf((&(.{switch(b) {
+//        1 => "a",
+//        2 => "aa",
+//        3 => "aaa",
+//        4 => "aaaa",
+//        else => "",
+//    }})).*)});
+//
+//    if(b <= 4) return;
+
     try gui.init_gui();
     defer gui.quit_gui();
-    const win = try gui.Window.create("Hello, World!", 800, 600);
+    const win = try gui.Window.create("Hello, World!", 800, 800);
 
     win.show();
     gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
@@ -67,11 +102,12 @@ pub fn main() !void {
     win.swap();
 
     const model = gui.Mat4.identity();
-
+    const view = gui.Mat4.lookAt(p.Vec3{.x = -1.0, .y = 1.0, .z = 1.0}, p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0}, p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0});
+    _ = view;
     const sh = try gui.Shader.create("shader.vert", "shader.frag");
 
 
-    const mesh = gui.Mesh.create(&[_]s.Vertex{
+    const quad = try gui.Mesh.create(&[_]s.Vertex{
         s.Vertex{ .pos = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 } },
         s.Vertex{ .pos = p.Vec3{ .x = 0.5, .y = 0.0, .z = 0.0 } },
         s.Vertex{ .pos = p.Vec3{ .x = 0.0, .y = 0.5, .z = 0.0 } },
@@ -80,9 +116,16 @@ pub fn main() !void {
         s.Triangle{ .v1 = 0, .v2 = 3, .v3 = 2 },
         s.Triangle{ .v1 = 0, .v2 = 1, .v3 = 3 },
     }, sh, model);
+    _ = quad;
+    const sphere_struct = s.sphere(3);
 
+    var sphere_data : sphere_struct = undefined;
+    sphere_data.init();
+    _ = sphere_struct;
+    const sphere_mesh = try gui.Mesh.create(&sphere_data.vertices, &sphere_data.indices, sh, model);
     gui.Window.clear();
-    mesh.draw();
+    // quad.draw();
+    sphere_mesh.draw();
     win.swap();
 
     // Simulation
@@ -113,7 +156,7 @@ pub fn main() !void {
     const data = @intCast(u64, c.NUM_STEPS) * @intCast(u64, @sizeOf(p.Frame));
     print("{}B in {}ms: {}GB/s\n", .{ data, @intToFloat(f64, t2 - t1) / 1000000.0, @intToFloat(f64, data) / @intToFloat(f64, t2 - t1) });
 
-    const doExport: bool = true;
+    const doExport: bool = false;
 
     if (doExport) {
         // Data

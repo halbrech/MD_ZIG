@@ -156,6 +156,9 @@ pub const Vec3 = packed struct {
 	pub fn sub(u: Vec3, v: Vec3) Vec3 {
 		return Vec3{.x = u.x - v.x, .y = u.y - v.y, .z = u.z - v.z};
 	}
+	pub fn mul(u: Vec3, a: f64) Vec3 {
+		return Vec3{.x = u.x*a, .y = u.y*a, .z = u.z*a};
+	}
 	pub fn scaledAdd(u: Vec3, v: Vec3, scale : f64) Vec3 {
 		return Vec3{.x = u.x + scale * v.x,
 					.y = u.y + scale * v.y,
