@@ -145,7 +145,7 @@ pub fn periodicDistance1D(x1 : f64, x2 : f64, comptime boundary : f64) f64 {
 	return x;
 }
 
-pub const Vec3 = struct {
+pub const Vec3 = packed struct {
 	x: f64,
 	y: f64,
 	z: f64,

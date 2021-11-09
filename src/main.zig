@@ -8,6 +8,8 @@ const print = @import("std").debug.print;
 
 const gui = @import("gui.zig");
 
+const s = @import("sphere.zig");
+
 pub fn initParticles(sys: *p.System) !void {
 	var prng = std.rand.DefaultPrng.init(blk: {
 		var seed: u64 = 0x8548294876937;
@@ -17,7 +19,7 @@ pub fn initParticles(sys: *p.System) !void {
 	const rand = &prng.random();
 	
 	const frame = sys.ring[0];
-
+	
 	var id: p.ID = 0;
 	while(id < c.NUM_PARTICLES) : (id = id + 1) {
 		while(true) {
@@ -58,17 +60,26 @@ pub fn initSystem() !*p.System {
 
 pub fn main() !void {
 	try gui.init_gui();
+	defer gui.quit_gui();
 	const win = try gui.Window.create("Hello, World!", 800, 600);
-	
 	
 	win.show();
 	gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
 	gui.Window.clear();
 	win.swap();
 
+	const model = gui.Mat4.identity();
+
+	const mesh = gui.Mesh.create(&[_]s.Vertex {}, &[_]s.Triangle {}, 0, model);
+
+	gui.Window.clear();
+	mesh.draw();
+	win.swap();
+
+
 	// Simulation	
 	var sys = try initSystem();
-	
+		
 	var i : u32 = 0;
 	var curr: u32 = 0;
 	var t1 = std.time.nanoTimestamp();
@@ -97,6 +108,7 @@ pub fn main() !void {
 
 	const doExport: bool = true;
 
+	
 
 	if(doExport) {
 		// Data
