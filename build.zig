@@ -84,9 +84,15 @@ pub fn build(b: *std.build.Builder) !void {
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.linkSystemLibrary("c");
-    exe.linkSystemLibrary("SDL2");
+    exe.linkLibC();
     switch (target.getOsTag()) {
-        .windows => exe.linkSystemLibrary("opengl32"),
+        .windows => {
+                exe.linkSystemLibrary("opengl32");
+                const sdl_path = "lib\\SDL2-Windows\\";
+                exe.addIncludeDir(sdl_path ++ "include");
+                exe.addLibPath(sdl_path ++ "lib\\x64\\");
+                b.installBinFile(sdl_path ++ "lib\\x64\\SDL2.dll", "SDL2.dll");
+            },
         .macos   => exe.linkFramework("OpenGL"),
         .linux   => exe.linkSystemLibrary("GL"),
         else => {
@@ -96,6 +102,7 @@ pub fn build(b: *std.build.Builder) !void {
             return;
         }
     }
+    exe.linkSystemLibrary("SDL2");
     exe.install();
 
     const run_cmd = exe.run();

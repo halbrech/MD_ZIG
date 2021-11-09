@@ -1,9 +1,19 @@
 const print = @import("std").debug.print;
 const p = @import("Particle.zig");
+const builtin = @import("builtin");
 const std = @import("std");
 const sphere = @import("sphere.zig");
-const sdl = @cImport({
-    @cInclude("SDL2/SDL.h");
+const sdl = @cImport ({
+    switch(builtin.os.tag) {
+        .windows => {
+            @cInclude("SDL.h");
+        },
+        .linux => {
+            @cInclude("SDL2/SDL.h");
+        },
+        else => {}
+    }
+	@cInclude("SDL.h");
 });
 
 const gl = @import("glad.zig");
