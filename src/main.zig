@@ -121,24 +121,27 @@ pub fn runSimulation() !void {
     print("{}B in {}ms: {}GB/s\n", .{ data, @intToFloat(f64, t2 - t1) / 1000000.0, @intToFloat(f64, data) / @intToFloat(f64, t2 - t1) });
 }
 
+const TEST = true;
 
 pub fn main() !void {
-    try gui.init_gui();
-    defer gui.quit_gui();
+   
+    try gui.initGUI();
+    defer gui.quitGUI();
     
     const win = try gui.Window.create("MD_ZIG", 800, 800);
 
     win.show();
     gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
-    // gui.Window.clear();
-    // win.swap();
-
+ 
     const model = gui.Mat4.identity();
 
-    var pos = p.Vec3{.x = 1.0, .y = 0.0, .z = 0.0}; // pos
+    var pos = p.Vec3{.x = 5.0, .y = 5.0, .z = 5.0}; // pos
     var up = p.Vec3{.x = 0.0, .y = 0.0, .z = 1.0};  // up
     var look_at = p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0}; // forward
     var view = gui.Mat4.lookAt(pos, up, look_at);
+
+    const perspective = gui.Mat4.perspective(5.0, 5.0, 0.01, 100.0);
+
     const sh = try gui.Shader.create("shader.vert", "shader.frag");
 
 
@@ -152,10 +155,16 @@ pub fn main() !void {
     // sphere_mesh.draw();
     // win.swap();
 
+    const line_shader = try gui.Shader.create("line.vert", "line.frag");
+
+    const d: f32 = 2.0;
+    const xaxis = gui.Line.create(p.Vec3{.x = -d, .y = 0.0, .z = 0.0}, p.Vec3{.x = d, .y = 0.0, .z = 0.0}, [3]f32{1.0, 0.0, 0.0}, line_shader);
+    const yaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = -d, .z = 0.0}, p.Vec3{.x = 0.0, .y = d, .z = 0.0}, [3]f32{0.0, 1.0, 0.0}, line_shader);
+    const zaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = 0.0, .z = -d}, p.Vec3{.x = 0.0, .y = 0.0, .z = d}, [3]f32{0.0, 0.0, 1.0}, line_shader);
+
+    const cube = try gui.cube(sh, model);
 
     var ev: gui.sdl.SDL_Event = undefined;
-    // print("{}", .{@typeInfo(gui.sdl.SDL_Event)});
-    // main loop
     main_loop: while (true) {
         // window event loop
         while (gui.sdl.SDL_PollEvent(&ev) != 0) {
@@ -168,14 +177,28 @@ pub fn main() !void {
                         break :main_loop;
                     }
                 },
+                gui.sdl.SDL_KEYDOWN => {
+                    if((ev.key.keysym.sym == gui.sdl.SDLK_q) or (ev.key.keysym.sym == gui.sdl.SDLK_ESCAPE)) {
+                        break :main_loop;
+                    }
+                },
                 else => {}
             }
         }
 
         gui.Window.clear();
-        sphere_mesh.draw(&view);
+        _ = xaxis;
+        _ = yaxis;
+        _ = zaxis;
+        xaxis.draw(&view, &perspective);
+        yaxis.draw(&view, &perspective);
+        zaxis.draw(&view, &perspective);
+        _ = sphere_mesh;
+        sphere_mesh.draw(&view, &perspective);
+        // cube.draw(&view, &perspective);
+        _ = cube;
         win.swap();
-        pos.z += 0.005;
+        // pos.z += 0.5;
         view = gui.Mat4.lookAt(pos, up, look_at);
     }
 }

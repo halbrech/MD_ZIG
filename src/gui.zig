@@ -20,16 +20,94 @@ const gl = @import("glad.zig");
 
 const NO_GL_DEBUG_OUTPUT = false;
 
-pub fn init_gui() !void {
+pub fn initGUI() !void {
     const sdl_init = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
     if (sdl_init < 0) {
         // print("Error initializing SDL2: {s}", .{sdl.SDL_GetError()});
     }
 }
 
-pub fn quit_gui() void {
+pub fn quitGUI() void {
     _ = sdl.SDL_Quit();
 }
+
+pub const Line = struct {
+    VAO: u32,
+    VBO: u32,
+    color: [3]f32,
+    shader: u32,
+    pub fn create(start: p.Vec3, end: p.Vec3, color: [3]f32, shader: u32) Line {
+
+        const floats: []f32 = &[_]f32{
+            @floatCast(f32, start.x), 
+            @floatCast(f32, start.y), 
+            @floatCast(f32, start.z), 
+            @floatCast(f32, end.x),
+            @floatCast(f32, end.y), 
+            @floatCast(f32, end.z)
+        };
+
+        var vao: u32 = undefined;
+        gl.glGenVertexArrays(1, &vao);
+        gl.glBindVertexArray(vao);
+
+        var vbo: u32 = undefined;
+        gl.glGenBuffers(1, &vbo);
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo);
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, @intCast(c_long, floats.len * @sizeOf(f32)), floats.ptr, gl.GL_STATIC_DRAW);
+        
+        gl.glEnableVertexAttribArray(0);
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, @sizeOf(f32)*3, null);
+
+        gl.glBindVertexArray(0);
+        
+        return Line{ .VAO = vao, .VBO = vbo, .shader = shader, .color = color };
+    }
+
+    pub fn draw(self: *const Line, view: *const Mat4, proj: *const Mat4) void {
+        gl.glUseProgram(self.shader);
+        gl.glUniformMatrix4fv(0, 1, gl.GL_TRUE, &view.a[0]);
+        gl.glUniformMatrix4fv(1, 1, gl.GL_TRUE, &proj.a[0]);
+        gl.glBindVertexArray(self.VAO);
+        
+        gl.glUniform3f(2, self.color[0], self.color[1], self.color[2]);
+        gl.glDrawArrays(gl.GL_LINES, 0, 2);
+        
+        gl.glBindVertexArray(0);
+        gl.glUseProgram(0);
+    }
+};
+
+pub fn cube(shader: u32, model: Mat4) !Mesh {
+    const verts = [_]sphere.Vertex {
+        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = -1.0, .z = -1.0}, .norm = p.Vec3{.x = -1.0, .y = -1.0, .z = -1.0}}, // 0  
+        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = -1.0, .z = -1.0}, .norm = p.Vec3{.x = 1.0, .y = -1.0, .z = -1.0}}, // 1
+        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = 1.0, .z = -1.0}, .norm = p.Vec3{.x = 1.0, .y = 1.0, .z = -1.0}}, // 2
+        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = 1.0, .z = -1.0}, .norm = p.Vec3{.x = -1.0, .y = 1.0, .z = -1.0}}, // 3 
+        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = -1.0, .z = 1.0}, .norm = p.Vec3{.x = -1.0, .y = -1.0, .z = 1.0}}, // 4 
+        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = -1.0, .z = 1.0}, .norm = p.Vec3{.x = 1.0, .y = -1.0, .z = 1.0}}, // 5
+        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = 1.0, .z = 1.0}, .norm = p.Vec3{.x = 1.0, .y = 1.0, .z = 1.0}}, // 6
+        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = 1.0, .z = 1.0}, .norm = p.Vec3{.x = -1.0, .y = 1.0, .z = 1.0}}, // 7
+    };
+    const indices = [_]sphere.Triangle {
+        sphere.Triangle{.v1 = 0, .v2 = 2, .v3 = 1}, // bottom
+        sphere.Triangle{.v1 = 0, .v2 = 3, .v3 = 2}, // bottom
+        sphere.Triangle{.v1 = 4, .v2 = 5, .v3 = 6}, // top
+        sphere.Triangle{.v1 = 4, .v2 = 6, .v3 = 7}, // top
+        sphere.Triangle{.v1 = 0, .v2 = 1, .v3 = 5}, // front
+        sphere.Triangle{.v1 = 0, .v2 = 5, .v3 = 4}, // front
+        sphere.Triangle{.v1 = 3, .v2 = 6, .v3 = 2}, // back
+        sphere.Triangle{.v1 = 3, .v2 = 7, .v3 = 6}, // back
+        sphere.Triangle{.v1 = 3, .v2 = 4, .v3 = 7}, // left
+        sphere.Triangle{.v1 = 3, .v2 = 0, .v3 = 4}, // left
+        sphere.Triangle{.v1 = 1, .v2 = 2, .v3 = 6}, // right
+        sphere.Triangle{.v1 = 1, .v2 = 6, .v3 = 5}, // right
+    };
+
+
+    return Mesh.create(&verts, &indices, shader, model);
+}
+
 fn glDebugMessageCallback(source: c_uint, msg_type: c_uint, id: c_uint, severity: c_uint, length: c_int, msg: [*c]const u8, data: ?*const c_void) callconv(.C) void {
     if(NO_GL_DEBUG_OUTPUT) return;
     print("GL: type: {s}, ", .{(&(switch (msg_type) {
@@ -86,9 +164,9 @@ pub const Window = struct {
 
         gl.glEnable(gl.GL_DEBUG_OUTPUT);
         gl.glDebugMessageCallback(glDebugMessageCallback, null);
-		// gl.glEnable(gl.GL_CULL_FACE);
-        gl.glEnable(gl.GL_DEPTH_TEST);
-		gl.glEnable(gl.GL_BLEND);
+		gl.glEnable(gl.GL_CULL_FACE);
+        // gl.glEnable(gl.GL_DEPTH_TEST);
+	    gl.glEnable(gl.GL_BLEND);
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA);
 
         return Window{ .width = width, .height = height, .handle = window, .gl_context = gl_ctx };
@@ -258,14 +336,22 @@ pub const Mesh = struct {
         return Mesh{ .VAO = vao, .VBO = vbo, .EBO = ebo, .shader = shader, .model = model, .size = i.len*3 };
     }
 
-    pub fn draw(self: *const Mesh, view: *const Mat4) void {
+    pub fn draw(self: *const Mesh, view: *const Mat4, proj: *const Mat4) void {
         gl.glUseProgram(self.shader);
         gl.glUniformMatrix4fv(0, 1, gl.GL_TRUE, &self.model.a[0]);
         gl.glUniformMatrix4fv(1, 1, gl.GL_TRUE, &view.a[0]);
+        gl.glUniformMatrix4fv(2, 1, gl.GL_TRUE, &proj.a[0]);
         gl.glBindVertexArray(self.VAO);
         //print("Drawing {} vertices.\n", .{self.size});
+        
+        gl.glUniform1i(3, 1);
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL);
         gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
-        gl.glBindVertexArray(0);
+        
+        // gl.glUniform1i(3, 0);
+        // gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE);
+        // gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
+        // gl.glBindVertexArray(0);
     }
 };
 
@@ -294,21 +380,29 @@ pub const Mat4 = struct {
         };
     }
 
-    pub fn lookAt(pos: p.Vec3, up: p.Vec3, look_at: p.Vec3) Mat4 {
-        // const up = right.cross(forward);
-        var forward = pos.sub(look_at);
-        forward.normalize();
-        var right = up.cross(forward);
-        right.normalize();
-        // camUp = dir x (|up x dir|)
-        const cam_up = forward.cross(right);
+    pub fn lookAt(pos: p.Vec3, up: p.Vec3, target: p.Vec3) Mat4 {
+        var dir = pos.sub(target).normalize();
+        var right = up.cross(dir).normalize();
+        const cam_up = dir.cross(right);
         return Mat4{
             .a = [16]f32{
                 @floatCast(f32, right.x), @floatCast(f32, right.y), @floatCast(f32, right.z), @floatCast(f32, -right.dot(pos)),
                 @floatCast(f32, cam_up.x),  @floatCast(f32, cam_up.y), @floatCast(f32, cam_up.z), @floatCast(f32, -cam_up.dot(pos)),
-                @floatCast(f32, forward.x), @floatCast(f32, forward.y), @floatCast(f32, forward.z), @floatCast(f32, -forward.dot(pos)), 
+                @floatCast(f32, dir.x), @floatCast(f32, dir.y), @floatCast(f32, dir.z), @floatCast(f32, -dir.dot(pos)), 
                 0.0,     0.0,  0.0,       1.0,
             },
+        };
+    }
+
+    pub fn perspective(width: f32, height: f32, near: f32, far: f32) Mat4 {
+        // const s = 
+        return Mat4{
+            .a = [16]f32 {
+                2.0 / width, 0.0, 0.0, 0.0,
+                0.0, 2.0 / height, 0.0, 0.0,
+                0.0, 0.0, (-2.0) / (far - near), -(far + near) / (far - near),
+                0.0, 0.0, 0.0, 1.0 
+            }
         };
     }
 
