@@ -348,10 +348,10 @@ pub const Mesh = struct {
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL);
         gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
         
-        // gl.glUniform1i(3, 0);
-        // gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE);
-        // gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
-        // gl.glBindVertexArray(0);
+        gl.glUniform1i(3, 0);
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE);
+        gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
+        gl.glBindVertexArray(0);
     }
 };
 
@@ -377,6 +377,45 @@ pub const Mat4 = struct {
                 0.0, 0.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 1.0,
             },
+        };
+    }
+
+    pub fn RotationXMat4(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                1,  0,  0, 0,
+                0,  c, -s, 0,
+                0,  s,  c, 0,
+                0,  0,  0, 1,
+            },
+        };
+    }
+
+    pub fn RotationYMat4(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                c, 0, s, 0,
+                0, 1, 0, 0,
+                -s, 0, c, 0,
+                0, 0, 0, 1,
+            }
+        };
+    }
+
+    pub fn RotationZMat4(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                c, -s, 0, 0,
+                s,  c, 0, 0,
+                0,  0, 1, 0,
+                0,  0, 0, 1,
+            }
         };
     }
 
@@ -421,5 +460,12 @@ pub const Mat4 = struct {
             }
         }
         return res;
+    }
+    pub fn mulVec3(mat: *Mat4, v: *p.Vec3) p.Vec3 {
+        return p.Vec3{
+            .x = mat.a[0]*v.x + mat.a[1]*v.y + mat.a[2]*v.z,
+            .y = mat.a[4]*v.x + mat.a[5]*v.y + mat.a[6]*v.z,
+            .z = mat.a[8]*v.x + mat.a[9]*v.y + mat.a[10]*v.z,
+        };
     }
 };

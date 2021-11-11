@@ -164,6 +164,10 @@ pub fn main() !void {
 
     const cube = try gui.cube(sh, model);
 
+    var pressedLeftButton: bool = false;
+    var mouseX: c_int = 0;
+    var mouseY: c_int = 0;
+
     var ev: gui.sdl.SDL_Event = undefined;
     main_loop: while (true) {
         // window event loop
@@ -181,6 +185,29 @@ pub fn main() !void {
                     if((ev.key.keysym.sym == gui.sdl.SDLK_q) or (ev.key.keysym.sym == gui.sdl.SDLK_ESCAPE)) {
                         break :main_loop;
                     }
+                },
+                gui.sdl.SDL_MOUSEBUTTONDOWN => {
+                    if(ev.button.button == gui.sdl.SDL_BUTTON_LEFT) {
+                        pressedLeftButton = true;
+                    }
+                    //var x : i32 = ev.x; 
+                },
+                gui.sdl.SDL_MOUSEBUTTONUP => {
+                    if(ev.button.button == gui.sdl.SDL_BUTTON_LEFT) {
+                        pressedLeftButton = false;
+                    }
+                },
+                gui.sdl.SDL_MOUSEMOTION => {
+                    var newMouseX = ev.motion.x;
+                    var newMouseY = ev.motion.y;
+                    if(pressedLeftButton) {
+                        // Update camera:
+                        var rotation: gui.Mat4 = gui.Mat4.RotationXMat4(@intToFloat(f32, newMouseY - mouseY)*0.01).mul(
+                            &gui.Mat4.RotationYMat4(@intToFloat(f32, newMouseX - mouseX)*0.01));
+                        pos = rotation.mulVec3(&pos);
+                    }
+                    mouseX = newMouseX;
+                    mouseY = newMouseY;
                 },
                 else => {}
             }
