@@ -203,29 +203,38 @@ pub fn freeFileString(buf: *[]u8) void {
     std.heap.page_allocator.destroy(buf);
 }
 
+pub const ShaderStage = enum {
+    VERTEX,
+    FRAGMENT,
+    GEOMETRY,
+    COMPUTE,
+};
+
 pub const Shader = struct {
     id: u32,
+    
+    
 
-    pub fn create(vertex_path: []const u8, fragment_path: []const u8) !u32 {
-        var vss = try fileToString(vertex_path);
-        var fss = try fileToString(fragment_path);
-
-        const vs_ref_buf = [_] [*c]u8 {@ptrCast([*c]u8, vss.ptr)};
-        const fs_ref_buf = [_] [*c]u8 {@ptrCast([*c]u8, fss.ptr)};
-        
-        
-        // defer freeFileString(&vss);
-        // defer freeFileString(&fss);
-
-
-        // print("Vertex shader({}): \n{s}\n", .{vss.len, vss});
-        // print("Fragment shader({}): \n{s}\n", .{fss.len, fss});
-
-
-        const vs = gl.glCreateShader(gl.GL_VERTEX_SHADER);
-        const fs = gl.glCreateShader(gl.GL_FRAGMENT_SHADER);
-        gl.glShaderSource(vs, 1, @ptrCast([*c]const [*c]const u8, &vs_ref_buf[0]), @ptrCast([*c]const c_int, &vss.len));
-        gl.glShaderSource(fs, 1, @ptrCast([*c]const [*c]const u8, &fs_ref_buf[0]), @ptrCast([*c]const c_int, &fss.len));
+    pub fn create() !Shader {
+        // var vss = try fileToString(vertex_path);
+        // var fss = try fileToString(fragment_path);
+// 
+        // const vs_ref_buf = [_] [*c]u8 {@ptrCast([*c]u8, vss.ptr)};
+        // const fs_ref_buf = [_] [*c]u8 {@ptrCast([*c]u8, fss.ptr)};
+        // 
+        // 
+        // // defer freeFileString(&vss);
+        // // defer freeFileString(&fss);
+// 
+// 
+        // // print("Vertex shader({}): \n{s}\n", .{vss.len, vss});
+        // // print("Fragment shader({}): \n{s}\n", .{fss.len, fss});
+// 
+// 
+        // const vs = gl.glCreateShader(gl.GL_VERTEX_SHADER);
+        // const fs = gl.glCreateShader(gl.GL_FRAGMENT_SHADER);
+        // gl.glShaderSource(vs, 1, @ptrCast([*c]const [*c]const u8, &vs_ref_buf[0]), @ptrCast([*c]const c_int, &vss.len));
+        // gl.glShaderSource(fs, 1, @ptrCast([*c]const [*c]const u8, &fs_ref_buf[0]), @ptrCast([*c]const c_int, &fss.len));
 
 //        for(vss) |*c| {
 //            c.* = ' ';
@@ -240,55 +249,103 @@ pub const Shader = struct {
 //        print("Loaded Vertex shader({}): \n{s}\n", .{vss.len, vss});
 //        print("Loaded Fragment shader({}): \n{s}\n", .{fss.len, fss});
 
-        gl.glCompileShader(vs);
+        // gl.glCompileShader(vs);
+// 
+// 
+// 
+        // var success = gl.GL_FALSE;
+        // gl.glGetShaderiv(vs, gl.GL_COMPILE_STATUS, &success);
+        // if(success != gl.GL_TRUE) {
+        //     var len: u32 = undefined;
+        //     gl.glGetShaderiv(vs, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
+        //     var buf: [4096] u8 = undefined;
+        //     gl.glGetShaderInfoLog(vs, 4096, @ptrCast(*c_int, &len), &buf);
+        //     print("Error compiling vertex shader({}):\n{s}\n", .{len, buf});
+        //     return anyerror.Error; 
+        // }
+        // 
+        // gl.glCompileShader(fs);
+// 
+        // success = gl.GL_FALSE;
+        // gl.glGetShaderiv(fs, gl.GL_COMPILE_STATUS, &success);
+        // if(success != gl.GL_TRUE) {
+        //     var len: u32 = undefined;
+        //     gl.glGetShaderiv(fs, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
+        //     var buf: [4096] u8 = undefined;
+        //     gl.glGetShaderInfoLog(fs, 4096, @ptrCast(*c_int, &len), &buf);
+        //     print("Error compiling vertex shader({}):\n{s}\n", .{len, buf});
+        //     return anyerror.Error;
+        // }
+// 
+        // const prog = gl.glCreateProgram();
+        // gl.glAttachShader(prog, vs);
+        // gl.glAttachShader(prog, fs);
+        // gl.glLinkProgram(prog);
+        // // gl.glDetachShader(prog, vs);
+        // // gl.glDetachShader(prog, fs);
+// 
+        // success = gl.GL_FALSE;
+        // gl.glGetProgramiv(prog, gl.GL_LINK_STATUS, &success);
+        // if(success != gl.GL_TRUE) {
+        //     var len: u32 = undefined;
+        //     gl.glGetProgramiv(prog, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
+        //     var buf: [4096] u8 = undefined;
+        //     gl.glGetProgramInfoLog(prog, 4096, @ptrCast(*c_int, &len), &buf);
+        //     print("Error Linking Shader program({}):\n{s}\n", .{len, buf});
+        //     return anyerror.Error;
+        // }
 
+        
+        // return prog;
+        return Shader{.id = gl.glCreateProgram()};
+    }
 
+    pub fn addShader(self: *Shader, filename: []const u8, shader_stage: ShaderStage) !void {
+        var source = try fileToString(filename);
+        const ref_buffer = [_] [*c]u8 {@ptrCast([*c]u8, source.ptr)};
+        const shader = gl.glCreateShader(switch(shader_stage) {
+            ShaderStage.VERTEX => gl.GL_VERTEX_SHADER,
+            ShaderStage.FRAGMENT => gl.GL_FRAGMENT_SHADER,
+            ShaderStage.GEOMETRY => gl.GL_GEOMETRY_SHADER,
+            ShaderStage.COMPUTE => gl.GL_COMPUTE_SHADER,
+            // else => return anyerror.Error,
+        });
+        defer gl.glDeleteShader(shader);
+        
+        gl.glShaderSource(shader, 1, @ptrCast([*c]const [*c]const u8, &ref_buffer[0]), @ptrCast([*c]const c_int, &source.len));
+        
+        gl.glCompileShader(shader);
 
         var success = gl.GL_FALSE;
-        gl.glGetShaderiv(vs, gl.GL_COMPILE_STATUS, &success);
+        gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS, &success);
         if(success != gl.GL_TRUE) {
             var len: u32 = undefined;
-            gl.glGetShaderiv(vs, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
+            gl.glGetShaderiv(shader, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
             var buf: [4096] u8 = undefined;
-            gl.glGetShaderInfoLog(vs, 4096, @ptrCast(*c_int, &len), &buf);
-            print("Error compiling vertex shader({}):\n{s}\n", .{len, buf});
-            return anyerror.Error; 
-        }
-        
-        gl.glCompileShader(fs);
-
-        success = gl.GL_FALSE;
-        gl.glGetShaderiv(fs, gl.GL_COMPILE_STATUS, &success);
-        if(success != gl.GL_TRUE) {
-            var len: u32 = undefined;
-            gl.glGetShaderiv(fs, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
-            var buf: [4096] u8 = undefined;
-            gl.glGetShaderInfoLog(fs, 4096, @ptrCast(*c_int, &len), &buf);
-            print("Error compiling vertex shader({}):\n{s}\n", .{len, buf});
+            gl.glGetShaderInfoLog(shader, 4096, @ptrCast(*c_int, &len), &buf);
+            print("Error compiling shader {s}({}):\n{s}\n", .{filename, len, buf});
             return anyerror.Error;
         }
 
-        const prog = gl.glCreateProgram();
-        gl.glAttachShader(prog, vs);
-        gl.glAttachShader(prog, fs);
-        gl.glLinkProgram(prog);
+        gl.glAttachShader(self.id, shader);
+    }
+
+    pub fn compile(self: *Shader) !void {
+        gl.glLinkProgram(self.id);
         // gl.glDetachShader(prog, vs);
         // gl.glDetachShader(prog, fs);
 
-        success = gl.GL_FALSE;
-        gl.glGetProgramiv(prog, gl.GL_LINK_STATUS, &success);
+        var success = gl.GL_FALSE;
+        gl.glGetProgramiv(self.id, gl.GL_LINK_STATUS, &success);
         if(success != gl.GL_TRUE) {
             var len: u32 = undefined;
-            gl.glGetProgramiv(prog, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
+            gl.glGetProgramiv(self.id, gl.GL_INFO_LOG_LENGTH, @ptrCast(*c_int, &len));
             var buf: [4096] u8 = undefined;
-            gl.glGetProgramInfoLog(prog, 4096, @ptrCast(*c_int, &len), &buf);
+            gl.glGetProgramInfoLog(self.id, 4096, @ptrCast(*c_int, &len), &buf);
             print("Error Linking Shader program({}):\n{s}\n", .{len, buf});
             return anyerror.Error;
         }
-
-        
-        return prog;
-    }
+    } 
 };
 
 pub const Mesh = struct {
@@ -348,10 +405,10 @@ pub const Mesh = struct {
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL);
         gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
         
-        // gl.glUniform1i(3, 0);
-        // gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE);
-        // gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
-        // gl.glBindVertexArray(0);
+        gl.glUniform1i(3, 0);
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE);
+        gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
+        gl.glBindVertexArray(0);
     }
 };
 

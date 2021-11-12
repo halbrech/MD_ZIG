@@ -135,34 +135,39 @@ pub fn main() !void {
  
     const model = gui.Mat4.identity();
 
-    var pos = p.Vec3{.x = 5.0, .y = 5.0, .z = 5.0}; // pos
+    var pos = p.Vec3{.x = 1.0, .y = 1.0, .z = 1.0}; // pos
     var up = p.Vec3{.x = 0.0, .y = 0.0, .z = 1.0};  // up
     var look_at = p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0}; // forward
     var view = gui.Mat4.lookAt(pos, up, look_at);
 
-    const perspective = gui.Mat4.perspective(5.0, 5.0, 0.01, 100.0);
+    const perspective = gui.Mat4.perspective(3.0, 3.0, 0.01, 100.0);
 
-    const sh = try gui.Shader.create("shader.vert", "shader.frag");
-
+    var sh = try gui.Shader.create();//  ("shader.vert", "shader.frag");
+    try sh.addShader("shader.vert", gui.ShaderStage.VERTEX);
+    try sh.addShader("shader.frag", gui.ShaderStage.FRAGMENT);
+    try sh.compile();
 
     const sphere_struct = s.sphere(4);
 
     var sphere_data : sphere_struct = undefined;
     sphere_data.init();
     _ = sphere_struct;
-    const sphere_mesh = try gui.Mesh.create(&sphere_data.vertices, &sphere_data.indices, sh, model);
+    const sphere_mesh = try gui.Mesh.create(&sphere_data.vertices, &sphere_data.indices, sh.id, model);
     // gui.Window.clear();
     // sphere_mesh.draw();
     // win.swap();
 
-    const line_shader = try gui.Shader.create("line.vert", "line.frag");
+    var line_shader = try gui.Shader.create(); // ("line.vert", "line.frag");
+    try line_shader.addShader("line.vert", gui.ShaderStage.VERTEX);
+    try line_shader.addShader("line.frag", gui.ShaderStage.FRAGMENT);
+    try line_shader.compile();
 
     const d: f32 = 2.0;
-    const xaxis = gui.Line.create(p.Vec3{.x = -d, .y = 0.0, .z = 0.0}, p.Vec3{.x = d, .y = 0.0, .z = 0.0}, [3]f32{1.0, 0.0, 0.0}, line_shader);
-    const yaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = -d, .z = 0.0}, p.Vec3{.x = 0.0, .y = d, .z = 0.0}, [3]f32{0.0, 1.0, 0.0}, line_shader);
-    const zaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = 0.0, .z = -d}, p.Vec3{.x = 0.0, .y = 0.0, .z = d}, [3]f32{0.0, 0.0, 1.0}, line_shader);
+    const xaxis = gui.Line.create(p.Vec3{.x = -d, .y = 0.0, .z = 0.0}, p.Vec3{.x = d, .y = 0.0, .z = 0.0}, [3]f32{1.0, 0.0, 0.0}, line_shader.id);
+    const yaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = -d, .z = 0.0}, p.Vec3{.x = 0.0, .y = d, .z = 0.0}, [3]f32{0.0, 1.0, 0.0}, line_shader.id);
+    const zaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = 0.0, .z = -d}, p.Vec3{.x = 0.0, .y = 0.0, .z = d}, [3]f32{0.0, 0.0, 1.0}, line_shader.id);
 
-    const cube = try gui.cube(sh, model);
+    const cube = try gui.cube(sh.id, model);
 
     var ev: gui.sdl.SDL_Event = undefined;
     main_loop: while (true) {
