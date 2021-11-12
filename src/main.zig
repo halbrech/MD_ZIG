@@ -128,26 +128,34 @@ pub fn main() !void {
     try gui.initGUI();
     defer gui.quitGUI();
     
-    const win = try gui.Window.create("MD_ZIG", 800, 800);
+    var win = try gui.Window.create("MD_ZIG", 800, 800);
 
     win.show();
     gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
  
     const model = gui.Mat4.identity();
 
+<<<<<<< HEAD
     var pos = p.Vec3{.x = 1.0, .y = 1.0, .z = 1.0}; // pos
+=======
+    var pos = p.Vec3{.x = 5.0, .y = 0.0, .z = 0.0}; // pos
+>>>>>>> 8a0d89377fa5ff8162bb56c2890a6afbd1be1be3
     var up = p.Vec3{.x = 0.0, .y = 0.0, .z = 1.0};  // up
     var look_at = p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0}; // forward
     var view = gui.Mat4.lookAt(pos, up, look_at);
 
+<<<<<<< HEAD
     const perspective = gui.Mat4.perspective(3.0, 3.0, 0.01, 100.0);
+=======
+    const sh = try gui.Shader.create("shader.vert", "shader.frag");
+>>>>>>> 8a0d89377fa5ff8162bb56c2890a6afbd1be1be3
 
     var sh = try gui.Shader.create();//  ("shader.vert", "shader.frag");
     try sh.addShader("shader.vert", gui.ShaderStage.VERTEX);
     try sh.addShader("shader.frag", gui.ShaderStage.FRAGMENT);
     try sh.compile();
 
-    const sphere_struct = s.sphere(4);
+    const sphere_struct = s.sphere(0);
 
     var sphere_data : sphere_struct = undefined;
     sphere_data.init();
@@ -169,6 +177,13 @@ pub fn main() !void {
 
     const cube = try gui.cube(sh.id, model);
 
+    var pressedLeftButton: bool = false;
+    var mouseX: c_int = 0;
+    var mouseY: c_int = 0;
+
+    var rotX: f32 = 0;
+    var rotY: f32 = 0;
+
     var ev: gui.sdl.SDL_Event = undefined;
     main_loop: while (true) {
         // window event loop
@@ -181,11 +196,36 @@ pub fn main() !void {
                     if(ev.window.type == gui.sdl.SDL_WINDOWEVENT_CLOSE) {
                         break :main_loop;
                     }
+                    if(ev.window.event == gui.sdl.SDL_WINDOWEVENT_RESIZED) {
+                        win.resize(@intCast(u64, ev.window.data1), @intCast(u64, ev.window.data2));
+                    }
                 },
                 gui.sdl.SDL_KEYDOWN => {
                     if((ev.key.keysym.sym == gui.sdl.SDLK_q) or (ev.key.keysym.sym == gui.sdl.SDLK_ESCAPE)) {
                         break :main_loop;
                     }
+                },
+                gui.sdl.SDL_MOUSEBUTTONDOWN => {
+                    if(ev.button.button == gui.sdl.SDL_BUTTON_LEFT) {
+                        pressedLeftButton = true;
+                    }
+                    //var x : i32 = ev.x; 
+                },
+                gui.sdl.SDL_MOUSEBUTTONUP => {
+                    if(ev.button.button == gui.sdl.SDL_BUTTON_LEFT) {
+                        pressedLeftButton = false;
+                    }
+                },
+                gui.sdl.SDL_MOUSEMOTION => {
+                    var newMouseX = ev.motion.x;
+                    var newMouseY = ev.motion.y;
+                    if(pressedLeftButton) {
+                        // Update camera:
+                        rotX += @intToFloat(f32, newMouseX - mouseX)*0.01;
+                        rotY += @intToFloat(f32, newMouseY - mouseY)*0.01;
+                    }
+                    mouseX = newMouseX;
+                    mouseY = newMouseY;
                 },
                 else => {}
             }
@@ -195,15 +235,17 @@ pub fn main() !void {
         _ = xaxis;
         _ = yaxis;
         _ = zaxis;
-        xaxis.draw(&view, &perspective);
-        yaxis.draw(&view, &perspective);
-        zaxis.draw(&view, &perspective);
+        xaxis.draw(&view, &win.projection);
+        yaxis.draw(&view, &win.projection);
+        zaxis.draw(&view, &win.projection);
         _ = sphere_mesh;
-        sphere_mesh.draw(&view, &perspective);
-        // cube.draw(&view, &perspective);
+        sphere_mesh.draw(&view, &win.projection);
+        //cube.draw(&view, &win.projection);
         _ = cube;
         win.swap();
         // pos.z += 0.5;
-        view = gui.Mat4.lookAt(pos, up, look_at);
+        var rotation: gui.Mat4 = gui.Mat4.RotationZMat4(-rotX).mul(
+            &gui.Mat4.RotationYMat4(-rotY));
+        view = gui.Mat4.lookAt(rotation.mulVec3(&pos), up, look_at);
     }
 }

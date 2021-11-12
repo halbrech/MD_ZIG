@@ -150,13 +150,14 @@ pub const Window = struct {
     height: u64,
     handle: *sdl.SDL_Window,
     gl_context: *c_void,
+    projection: Mat4,
 
     pub fn create(
         title: [*c]const u8,
         width: u64,
         height: u64,
     ) !Window {
-        const window = sdl.SDL_CreateWindow(title, sdl.SDL_WINDOWPOS_CENTERED, sdl.SDL_WINDOWPOS_CENTERED, @intCast(i32, width), @intCast(i32, height), sdl.SDL_WINDOW_OPENGL) orelse return error.Error;
+        const window = sdl.SDL_CreateWindow(title, sdl.SDL_WINDOWPOS_CENTERED, sdl.SDL_WINDOWPOS_CENTERED, @intCast(i32, width), @intCast(i32, height), sdl.SDL_WINDOW_OPENGL | sdl.SDL_WINDOW_RESIZABLE) orelse return error.Error;
 
         const gl_ctx = sdl.SDL_GL_CreateContext(window) orelse return error.Error;
         // print("{}\n", .{@TypeOf(gl_ctx)});
@@ -165,11 +166,12 @@ pub const Window = struct {
         gl.glEnable(gl.GL_DEBUG_OUTPUT);
         gl.glDebugMessageCallback(glDebugMessageCallback, null);
 		gl.glEnable(gl.GL_CULL_FACE);
-        // gl.glEnable(gl.GL_DEPTH_TEST);
+        //gl.glEnable(gl.GL_DEPTH_TEST);
 	    gl.glEnable(gl.GL_BLEND);
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA);
 
-        return Window{ .width = width, .height = height, .handle = window, .gl_context = gl_ctx };
+        return Window{ .width = width, .height = height, .handle = window, .gl_context = gl_ctx,
+        .projection = Mat4.perspective(1.0, @intToFloat(f32, width)/@intToFloat(f32, height), 0.01, 100.0)};
     }
 
     pub fn swap(self: *const Window) void {
@@ -179,6 +181,13 @@ pub const Window = struct {
 
     pub fn clearColor(r: f32, g: f32, b: f32, a: f32) void {
         gl.glClearColor(r, g, b, a);
+    }
+
+    pub fn resize(self: *Window, width: u64, height: u64) void {
+        self.width = width;
+        self.height = height;
+        self.projection = Mat4.perspective(1.0, @intToFloat(f32, width)/@intToFloat(f32, height), 0.01, 100.0);
+        gl.glViewport(0, 0, @intCast(c_int, width), @intCast(c_int, height));
     }
 
     pub fn clear() void {
@@ -394,6 +403,19 @@ pub const Mesh = struct {
     }
 
     pub fn draw(self: *const Mesh, view: *const Mat4, proj: *const Mat4) void {
+        print("View:\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n", .{
+            view.a[0], view.a[1], view.a[2], view.a[3],
+            view.a[4], view.a[5], view.a[6], view.a[7],
+            view.a[8], view.a[9], view.a[10], view.a[11],
+            view.a[12], view.a[13], view.a[14], view.a[15],
+        });
+        print("Projection:\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n", .{
+            proj.a[0], proj.a[1], proj.a[2], proj.a[3],
+            proj.a[4], proj.a[5], proj.a[6], proj.a[7],
+            proj.a[8], proj.a[9], proj.a[10], proj.a[11],
+            proj.a[12], proj.a[13], proj.a[14], proj.a[15],
+        });
+
         gl.glUseProgram(self.shader);
         gl.glUniformMatrix4fv(0, 1, gl.GL_TRUE, &self.model.a[0]);
         gl.glUniformMatrix4fv(1, 1, gl.GL_TRUE, &view.a[0]);
@@ -437,28 +459,78 @@ pub const Mat4 = struct {
         };
     }
 
+    pub fn scale(scl: f32) Mat4 {
+        return Mat4{
+            .a = [16]f32{
+                scl, 0.0, 0.0, 0.0,
+                0.0, scl, 0.0, 0.0,
+                0.0, 0.0, scl, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            },
+        };
+    }
+
+    pub fn RotationXMat4(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                1,  0,  0, 0,
+                0,  c, -s, 0,
+                0,  s,  c, 0,
+                0,  0,  0, 1,
+            },
+        };
+    }
+
+    pub fn RotationYMat4(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                c, 0, s, 0,
+                0, 1, 0, 0,
+                -s, 0, c, 0,
+                0, 0, 0, 1,
+            }
+        };
+    }
+
+    pub fn RotationZMat4(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                c, -s, 0, 0,
+                s,  c, 0, 0,
+                0,  0, 1, 0,
+                0,  0, 0, 1,
+            }
+        };
+    }
+
     pub fn lookAt(pos: p.Vec3, up: p.Vec3, target: p.Vec3) Mat4 {
         var dir = pos.sub(target).normalize();
         var right = up.cross(dir).normalize();
         const cam_up = dir.cross(right);
         return Mat4{
             .a = [16]f32{
-                @floatCast(f32, right.x), @floatCast(f32, right.y), @floatCast(f32, right.z), @floatCast(f32, -right.dot(pos)),
-                @floatCast(f32, cam_up.x),  @floatCast(f32, cam_up.y), @floatCast(f32, cam_up.z), @floatCast(f32, -cam_up.dot(pos)),
-                @floatCast(f32, dir.x), @floatCast(f32, dir.y), @floatCast(f32, dir.z), @floatCast(f32, -dir.dot(pos)), 
+                @floatCast(f32, right.x), @floatCast(f32, right.y), @floatCast(f32, right.z), -@floatCast(f32, right.dot(pos)),
+                @floatCast(f32, cam_up.x),  @floatCast(f32, cam_up.y), @floatCast(f32, cam_up.z), -@floatCast(f32, cam_up.dot(pos)),
+                @floatCast(f32, dir.x), @floatCast(f32, dir.y), @floatCast(f32, dir.z), -@floatCast(f32, dir.dot(pos)), 
                 0.0,     0.0,  0.0,       1.0,
             },
         };
     }
 
-    pub fn perspective(width: f32, height: f32, near: f32, far: f32) Mat4 {
-        // const s = 
+    pub fn perspective(tanY: f32, aspect: f32, near: f32, far: f32) Mat4 {
+        var tanX: f32 = tanY*aspect;
         return Mat4{
             .a = [16]f32 {
-                2.0 / width, 0.0, 0.0, 0.0,
-                0.0, 2.0 / height, 0.0, 0.0,
-                0.0, 0.0, (-2.0) / (far - near), -(far + near) / (far - near),
-                0.0, 0.0, 0.0, 1.0 
+                1.0 / tanX, 0.0, 0.0, 0.0,
+                0.0, 1.0 / tanY, 0.0, 0.0,
+                0.0, 0.0, -(near + far) / (far - near), -2*near*far/(far - near),
+                0.0, 0.0, -1.0, 0.0
             }
         };
     }
@@ -478,5 +550,12 @@ pub const Mat4 = struct {
             }
         }
         return res;
+    }
+    pub fn mulVec3(mat: *Mat4, v: *p.Vec3) p.Vec3 {
+        return p.Vec3{
+            .x = mat.a[0]*v.x + mat.a[1]*v.y + mat.a[2]*v.z,
+            .y = mat.a[4]*v.x + mat.a[5]*v.y + mat.a[6]*v.z,
+            .z = mat.a[8]*v.x + mat.a[9]*v.y + mat.a[10]*v.z,
+        };
     }
 };
