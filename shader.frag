@@ -25,6 +25,8 @@ void main()
 {
     if(mode == 0) { // main coloring (Blinn-Phong)
         vec3 norm = normalize(fragNorm);
+        if(!gl_FrontFacing)
+            norm = -norm;
 
         float ambientStrength = 0.2;
         vec3 ambient = ambientStrength * lightColor;

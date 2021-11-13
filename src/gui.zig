@@ -426,7 +426,7 @@ pub const Mesh = struct {
         gl.glBindVertexArray(self.VAO);
         // print("Drawing {} vertices.\n", .{self.size});
         
-        gl.glUniform1i(3, 1);
+        gl.glUniform1i(3, 0);
         gl.glUniform3f(5, cam.x, cam.y, cam.z);
         
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL);

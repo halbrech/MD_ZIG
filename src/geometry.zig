@@ -55,7 +55,7 @@ pub fn polygonizeTetrahedron(cell: *const GridCell, level: f32, vertex_buffer: *
             try vertex_buffer.append(Vertex{.pos = c, .norm = norm});
         
         },
-        0x0E => {            
+        0x0E => {
             const a = lerp(&cell.positions[v0], &cell.positions[v1], cell.values[v0], cell.values[v1], level);
             const b = lerp(&cell.positions[v0], &cell.positions[v2], cell.values[v0], cell.values[v2], level);
             const c = lerp(&cell.positions[v0], &cell.positions[v3], cell.values[v0], cell.values[v3], level);

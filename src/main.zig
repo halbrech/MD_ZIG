@@ -309,14 +309,15 @@ pub fn main() !void {
         // sphere_mesh.draw(&pos, &view, &win.projection);
         //cube.draw(&view, &win.projection);
         _ = surface1_obj;
-        surface1_obj.draw(&pos, &view, &win.projection);
-        surface2_obj.draw(&pos, &view, &win.projection);
+        var rotation: m.Mat4 = m.Mat4.rotateZ(-rotX).mul(
+            &m.Mat4.rotateY(-rotY));
+        var transformedPos = rotation.mulVec3(&pos).scale(zoom);
+        surface1_obj.draw(&transformedPos, &view, &win.projection);
+        surface2_obj.draw(&transformedPos, &view, &win.projection);
 
         _ = cube;
         win.swap();
         // pos.z += 0.5;
-        var rotation: m.Mat4 = m.Mat4.rotateZ(-rotX).mul(
-            &m.Mat4.rotateY(-rotY));
-        view = m.Mat4.lookAt(rotation.mulVec3(&pos).scale(zoom), up, look_at);
+        view = m.Mat4.lookAt(transformedPos, up, look_at);
     }
 }
