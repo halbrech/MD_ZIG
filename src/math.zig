@@ -1,175 +1,198 @@
-// const std = @import("std");
-// 
-// fn Vector(comptime T: type, m: usize) type {
-//     const iter_i: [m] u32 = [_]u32{undefined} ** m;
-//     return packed struct {
-//         d: [m]T,
-// 
-//         pub fn ones() @This() {
-//             var ret: @This() = undefined;
-//             inline for(iter_i) |_, i| {
-//                 ret.d[i] = 1;
-//             }
-//             return ret;
-//         }
-// 
-//         pub fn zeros() @This() {
-//             var ret: @This() = undefined;
-//             for(iter_i) |_, i| {
-//                 ret.d[i] = 0;
-//             }
-//             return ret;
-//         }
-// 
-//         pub fn add(a: *const @This(), b: *const @This()) @This() {
-//             var ret: @This() = undefined;
-//             for(iter_i) |_, i| {
-//                 ret.d[i] = a.d[i] + b.d[i];
-//             }
-//             return ret;
-//         }
-//         
-//         pub fn sub(a: *const @This(), b: *const @This()) @This() {
-//             var ret: @This() = undefined;
-//             for(iter_i) |_, i| {
-//                 ret.d[i] = a.d[i] - b.d[i];
-//             }
-//             return ret;
-//         }
-// 
-//         pub fn dot(a: *const @This(), b: *const @This()) T {
-//             var ret: T = 0;
-//             for(iter_i) |_, i| {
-//                 ret += a.d[i] * b.d[i];
-//             }
-//             return ret;
-//         }
-// 
-//         pub fn lensq(a: *const @This()) T {
-//             var ret: T = 0;
-//             for(iter_i) |_, i| {
-//                 ret += a.d[i] * a.d[i];
-//             }
-//             return ret;
-//         }
-// 
-//         pub fn len(a: *const @This()) T {
-//             return @sqrt(a.lensq());
-//         }
-// 
-//         pub fn distsq(a: *const @This(), b: *const @This()) T {
-//             return lensq(a.sub(&b));
-//         }
-// 
-//         pub fn dist(a: *const @This(), b: *const @This()) T {
-//             return len(a.sub(&b));
-//         }
-// 
-//         // only valid for m=3
-//         pub fn cross(a: *const @This(), b: *const @This()) T {
-//             var ret: @This() = undefined;
-//             ret.d[0] = a.d[1] * b.d[2] - a.d[2] * b.d[1];
-//             ret.d[1] = a.d[2] * b.d[0] - a.d[0] * b.d[2];
-//             ret.d[2] = a.d[0] * b.d[1] - a.d[1] * b.d[0];
-//             return ret;
-//         }
-//     };
-// }
-// 
-// fn Matrix(comptime T: type, comptime m: usize, comptime n: usize) type {
-//     const iter_i: [m] u32 = [_]u32{undefined} ** m;
-//     const iter_j: [n] u32 = [_]u32{undefined} ** n;
-//     return packed struct {
-//         d: [m][n]T,
-//         
-// 
-//         pub fn identity() @This() {
-//             comptime {
-//                 var ret: @This() = undefined;
-//                 inline for(ret.d) |*r, i| {
-//                     inline for(r) |_, j| {
-//                         if(i == j) {
-//                             ret.d[i][j] = 1;
-//                         } else {
-//                             ret.d[i][j] = 0;
-//                         }
-//                     }
-//                 }
-//                 return ret;
-//             }
-//         }
-// 
-//         pub fn zeros() @This() {
-//             comptime {
-//                 var ret: @This() = undefined;
-//                 for(ret.d) |*r, i| {
-//                     for(r) |_, j| {
-//                         ret.d[i][j] = 0;
-//                     }
-//                 }
-//                 return ret;
-//             }
-//         }
-// 
-//         pub fn ones() @This() {
-//             comptime {
-//                 var ret: @This() = undefined;
-//                 for(ret.d) |*r, i| {
-//                     for(r) |_, j| {
-//                         ret.d[i][j] = 1;
-//                     }
-//                 }
-//                 return ret;
-//             }
-//         }
-// 
-//         pub fn add(a: *const @This(), b: *const @This()) @This() {
-//             var ret: @This() = undefined;
-// 
-//             inline for(iter_i) |_, i| {
-//                 inline for(iter_j) |_, j| {
-//                     ret.d[i][j] = a.d[i][j] + b.d[i][j];
-//                 }
-//             }
-//             return ret;
-//         }
-// 
-//         pub fn mul(a: *const @This(), b: *const @This()) void {
-//             _ = a;
-//             _ = b;
-//         }
-// 
-//         pub fn vmul(mat: *const @This(), vec: *const Vector(T, m)) void {
-//             _ = mat;
-//             _ = vec;
-//         }
-//     };
-// }
-// 
-// // pub fn matmul(comptime T: type, comptime m: usize, comptime n: usize, comptime o: usize, a: *const Matrix(T, m, n), b: *const Matrix(T, n, o)) Matrix(T, m, o) {
-// //     var ret = Matrix(f32, m, o).zeros();
-// //     inline for(a.d) |i| {
-// //         var k = 0;
-// //         while(k < o) : (k += 1) {
-// //             inline for(b.d) |j| {
-// //                 ret.d[i][k] += a[i][j] * b[j][k];
-// //             }
-// //         }
-// //     }
-// //     return ret;
-// // }
-// 
-// pub const Vec1f = Vector(f32, 1);
-// pub const Vec2f = Vector(f32, 2);
-// pub const Vec3f = Vector(f32, 3);
-// pub const Vec4f = Vector(f32, 4);
-// pub const Mat2f = Matrix(f32, 2, 2);
-// pub const Mat3f = Matrix(f32, 3, 3);
-// pub const Mat4f = Matrix(f32, 4, 4);
-// pub const Vec1d = Vector(f64, 1);
-// pub const Vec2d = Vector(f64, 2);
-// pub const Vec3d = Vector(f64, 3);
-// pub const Vec4d = Vector(f64, 4);
-// pub const Mat2d = Matrix(f64, 2, 2);
-// pub const Mat3d = Matrix(f64, 3, 3);
-// pub const Mat4d = Matrix(f64, 4, 4);
+const std = @import("std");
+const math = @import("math");
+
+pub fn Vec3(comptime T: type) type {
+return packed struct {
+		x: T,
+		y: T,
+		z: T,
+
+		pub fn add(u: *const @This(), v: *const @This()) @This() {
+			return @This(){.x = u.x + v.x, .y = u.y + v.y, .z = u.z + v.z};
+		}
+		pub fn sub(u: *const @This(), v: *const @This()) @This() {
+			return @This(){.x = u.x - v.x, .y = u.y - v.y, .z = u.z - v.z};
+		}
+		pub fn mul(u: *const @This(), a: T) @This() {
+			return @This(){.x = u.x*a, .y = u.y*a, .z = u.z*a};
+		}
+		pub fn scaledAdd(u: *const @This(), v: *const @This(), scale : T) @This() {
+			return @This(){.x = u.x + scale * v.x,
+						.y = u.y + scale * v.y,
+						.z = u.z + scale * v.z};
+		}
+		pub fn dist(u: *const @This(), v: *const @This()) T {
+			return @sqrt((u.x - v.x) * (u.x - v.x) + (u.y - v.y) * (u.y - v.y) + (u.z - v.z) * (u.z - v.z));
+		}
+
+		pub fn distSquare(u: *const @This(), v: *const @This()) T {
+			return (u.x - v.x) * (u.x - v.x) + (u.y - v.y) * (u.y - v.y) + (u.z - v.z) * (u.z - v.z);
+		}
+
+		
+
+		pub fn valueSquare(u: *const @This()) T {
+			return u.x * u.x + u.y * u.y + u.z * u.z;
+		}
+
+		pub fn dot(u: *const @This(), v: *const @This()) T {
+			return u.x * v.x + u.y * v.y + u.z * v.z;
+		}
+
+		pub fn cross(u: *const @This(), v: *const @This()) @This() {
+			return @This(){.x = u.y * v.z - u.z * v.y, .y = u.z * v.x - u.x * v.z, .z = u.x * v.y - u.y * v.x};
+		}
+
+		pub fn normalize(u: *const @This()) @This() {
+			const inv_len = 1.0/@sqrt(u.x * u.x + u.y * u.y + u.z * u.z);
+			return @This(){
+				.x = u.x * inv_len,
+				.y = u.y * inv_len,
+				.z = u.z * inv_len,
+			};
+		}
+	};
+}
+
+pub const Vec3f = Vec3(f32);
+pub const Vec3d = Vec3(f64);
+pub const Vec3i = Vec3(isize);
+pub const Vec3u = Vec3(usize);
+
+
+pub const Mat4 = struct {
+    a: [16]f32,
+
+    pub fn zeros() Mat4 {
+        return Mat4{
+            .a = [16]f32{
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0,
+            },
+        };
+    }
+
+    pub fn identity() Mat4 {
+        return Mat4{
+            .a = [16]f32{
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            },
+        };
+    }
+
+    pub fn scale(scl: f32) Mat4 {
+        return Mat4{
+            .a = [16]f32{
+                scl, 0.0, 0.0, 0.0,
+                0.0, scl, 0.0, 0.0,
+                0.0, 0.0, scl, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            },
+        };
+    }
+
+    pub fn rotateX(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                1,  0,  0, 0,
+                0,  c, -s, 0,
+                0,  s,  c, 0,
+                0,  0,  0, 1,
+            },
+        };
+    }
+
+    pub fn rotateY(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                c, 0, s, 0,
+                0, 1, 0, 0,
+                -s, 0, c, 0,
+                0, 0, 0, 1,
+            }
+        };
+    }
+
+    pub fn rotateZ(rad: f32) Mat4 {
+        var s: f32 = @sin(rad);
+        var c: f32 = @cos(rad);
+        return Mat4{
+            .a = [16]f32{
+                c, -s, 0, 0,
+                s,  c, 0, 0,
+                0,  0, 1, 0,
+                0,  0, 0, 1,
+            }
+        };
+    }
+
+    pub fn translate(p: Vec3f) Mat4 {
+        return Mat4 {
+            .a = [16]f32 {
+                1, 0, 0, p.x,
+                0, 1, 0, p.y,
+                0, 0, 1, p.z,
+                0, 0, 0, 1,
+            }
+        };
+    }
+
+    pub fn lookAt(pos: Vec3f, up: Vec3f, target: Vec3f) Mat4 {
+        var dir = pos.sub(&target).normalize();
+        var right = up.cross(&dir).normalize();
+        const cam_up = dir.cross(&right);
+        return Mat4{
+            .a = [16]f32{
+                right.x, right.y, right.z, -right.dot(&pos),
+                cam_up.x,  cam_up.y, cam_up.z, -cam_up.dot(&pos),
+                dir.x, dir.y, dir.z, -dir.dot(&pos), 
+                0.0,     0.0,  0.0,       1.0,
+            },
+        };
+    }
+
+    pub fn perspective(tanY: f32, aspect: f32, near: f32, far: f32) Mat4 {
+        var tanX: f32 = tanY*aspect;
+        return Mat4{
+            .a = [16]f32 {
+                1.0 / tanX, 0.0, 0.0, 0.0,
+                0.0, 1.0 / tanY, 0.0, 0.0,
+                0.0, 0.0, -(near + far) / (far - near), -2*near*far/(far - near),
+                0.0, 0.0, -1.0, 0.0
+            }
+        };
+    }
+
+    pub fn mul(a: *const Mat4, b: *const Mat4) Mat4 {
+        var res: Mat4 = undefined;
+        var rowA: u32 = 0;
+        while(rowA < 4): (rowA += 1) {
+            var colB: u32 = 0;
+            while(colB < 4): (colB += 1) {
+                var posRes = 4*rowA + colB;
+                res.a[posRes] = 0;
+                var i: u32 = 0;
+                while(i < 4): (i += 1) {
+                    res.a[posRes] += a.a[4*rowA + i]*b.a[4*i + colB];
+                }
+            }
+        }
+        return res;
+    }
+    pub fn mulVec3(mat: *const Mat4, v: *const Vec3f) Vec3f {
+        return Vec3f{
+            .x = mat.a[0]*v.x + mat.a[1]*v.y + mat.a[2]*v.z,
+            .y = mat.a[4]*v.x + mat.a[5]*v.y + mat.a[6]*v.z,
+            .z = mat.a[8]*v.x + mat.a[9]*v.y + mat.a[10]*v.z,
+        };
+    }
+};

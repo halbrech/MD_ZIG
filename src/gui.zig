@@ -1,8 +1,11 @@
 const print = @import("std").debug.print;
-const p = @import("Particle.zig");
+const p = @import("particle.zig");
+
+const m = @import("math.zig");
+
 const builtin = @import("builtin");
 const std = @import("std");
-const sphere = @import("sphere.zig");
+const geometry = @import("geometry.zig");
 pub const sdl = @cImport ({
     switch(builtin.os.tag) {
         .windows => {
@@ -36,15 +39,15 @@ pub const Line = struct {
     VBO: u32,
     color: [3]f32,
     shader: u32,
-    pub fn create(start: p.Vec3, end: p.Vec3, color: [3]f32, shader: u32) Line {
+    pub fn create(start: m.Vec3f, end: m.Vec3f, color: [3]f32, shader: u32) Line {
 
         const floats: []f32 = &[_]f32{
-            @floatCast(f32, start.x), 
-            @floatCast(f32, start.y), 
-            @floatCast(f32, start.z), 
-            @floatCast(f32, end.x),
-            @floatCast(f32, end.y), 
-            @floatCast(f32, end.z)
+            start.x, 
+            start.y, 
+            start.z, 
+            end.x,
+            end.y, 
+            end.z,
         };
 
         var vao: u32 = undefined;
@@ -64,7 +67,7 @@ pub const Line = struct {
         return Line{ .VAO = vao, .VBO = vbo, .shader = shader, .color = color };
     }
 
-    pub fn draw(self: *const Line, view: *const Mat4, proj: *const Mat4) void {
+    pub fn draw(self: *const Line, view: *const m.Mat4, proj: *const m.Mat4) void {
         gl.glUseProgram(self.shader);
         gl.glUniformMatrix4fv(0, 1, gl.GL_TRUE, &view.a[0]);
         gl.glUniformMatrix4fv(1, 1, gl.GL_TRUE, &proj.a[0]);
@@ -78,30 +81,30 @@ pub const Line = struct {
     }
 };
 
-pub fn cube(shader: u32, model: Mat4) !Mesh {
-    const verts = [_]sphere.Vertex {
-        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = -1.0, .z = -1.0}, .norm = p.Vec3{.x = -1.0, .y = -1.0, .z = -1.0}}, // 0  
-        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = -1.0, .z = -1.0}, .norm = p.Vec3{.x = 1.0, .y = -1.0, .z = -1.0}}, // 1
-        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = 1.0, .z = -1.0}, .norm = p.Vec3{.x = 1.0, .y = 1.0, .z = -1.0}}, // 2
-        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = 1.0, .z = -1.0}, .norm = p.Vec3{.x = -1.0, .y = 1.0, .z = -1.0}}, // 3 
-        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = -1.0, .z = 1.0}, .norm = p.Vec3{.x = -1.0, .y = -1.0, .z = 1.0}}, // 4 
-        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = -1.0, .z = 1.0}, .norm = p.Vec3{.x = 1.0, .y = -1.0, .z = 1.0}}, // 5
-        sphere.Vertex{.pos = p.Vec3{.x = 1.0, .y = 1.0, .z = 1.0}, .norm = p.Vec3{.x = 1.0, .y = 1.0, .z = 1.0}}, // 6
-        sphere.Vertex{.pos = p.Vec3{.x = -1.0, .y = 1.0, .z = 1.0}, .norm = p.Vec3{.x = -1.0, .y = 1.0, .z = 1.0}}, // 7
+pub fn cube(shader: u32, model: m.Mat4) !Mesh {
+    const verts = [_]geometry.Vertex {
+        geometry.Vertex{.pos = m.Vec3f{.x = -1.0, .y = -1.0, .z = -1.0}, .norm = m.Vec3f{.x = -1.0, .y = -1.0, .z = -1.0}}, // 0  
+        geometry.Vertex{.pos = m.Vec3f{.x = 1.0, .y = -1.0, .z = -1.0}, .norm = m.Vec3f{.x = 1.0, .y = -1.0, .z = -1.0}}, // 1
+        geometry.Vertex{.pos = m.Vec3f{.x = 1.0, .y = 1.0, .z = -1.0}, .norm = m.Vec3f{.x = 1.0, .y = 1.0, .z = -1.0}}, // 2
+        geometry.Vertex{.pos = m.Vec3f{.x = -1.0, .y = 1.0, .z = -1.0}, .norm = m.Vec3f{.x = -1.0, .y = 1.0, .z = -1.0}}, // 3 
+        geometry.Vertex{.pos = m.Vec3f{.x = -1.0, .y = -1.0, .z = 1.0}, .norm = m.Vec3f{.x = -1.0, .y = -1.0, .z = 1.0}}, // 4 
+        geometry.Vertex{.pos = m.Vec3f{.x = 1.0, .y = -1.0, .z = 1.0}, .norm = m.Vec3f{.x = 1.0, .y = -1.0, .z = 1.0}}, // 5
+        geometry.Vertex{.pos = m.Vec3f{.x = 1.0, .y = 1.0, .z = 1.0}, .norm = m.Vec3f{.x = 1.0, .y = 1.0, .z = 1.0}}, // 6
+        geometry.Vertex{.pos = m.Vec3f{.x = -1.0, .y = 1.0, .z = 1.0}, .norm = m.Vec3f{.x = -1.0, .y = 1.0, .z = 1.0}}, // 7
     };
-    const indices = [_]sphere.Triangle {
-        sphere.Triangle{.v1 = 0, .v2 = 2, .v3 = 1}, // bottom
-        sphere.Triangle{.v1 = 0, .v2 = 3, .v3 = 2}, // bottom
-        sphere.Triangle{.v1 = 4, .v2 = 5, .v3 = 6}, // top
-        sphere.Triangle{.v1 = 4, .v2 = 6, .v3 = 7}, // top
-        sphere.Triangle{.v1 = 0, .v2 = 1, .v3 = 5}, // front
-        sphere.Triangle{.v1 = 0, .v2 = 5, .v3 = 4}, // front
-        sphere.Triangle{.v1 = 3, .v2 = 6, .v3 = 2}, // back
-        sphere.Triangle{.v1 = 3, .v2 = 7, .v3 = 6}, // back
-        sphere.Triangle{.v1 = 3, .v2 = 4, .v3 = 7}, // left
-        sphere.Triangle{.v1 = 3, .v2 = 0, .v3 = 4}, // left
-        sphere.Triangle{.v1 = 1, .v2 = 2, .v3 = 6}, // right
-        sphere.Triangle{.v1 = 1, .v2 = 6, .v3 = 5}, // right
+    const indices = [_]geometry.Triangle {
+        geometry.Triangle{.v1 = 0, .v2 = 2, .v3 = 1}, // bottom
+        geometry.Triangle{.v1 = 0, .v2 = 3, .v3 = 2}, // bottom
+        geometry.Triangle{.v1 = 4, .v2 = 5, .v3 = 6}, // top
+        geometry.Triangle{.v1 = 4, .v2 = 6, .v3 = 7}, // top
+        geometry.Triangle{.v1 = 0, .v2 = 1, .v3 = 5}, // front
+        geometry.Triangle{.v1 = 0, .v2 = 5, .v3 = 4}, // front
+        geometry.Triangle{.v1 = 3, .v2 = 6, .v3 = 2}, // back
+        geometry.Triangle{.v1 = 3, .v2 = 7, .v3 = 6}, // back
+        geometry.Triangle{.v1 = 3, .v2 = 4, .v3 = 7}, // left
+        geometry.Triangle{.v1 = 3, .v2 = 0, .v3 = 4}, // left
+        geometry.Triangle{.v1 = 1, .v2 = 2, .v3 = 6}, // right
+        geometry.Triangle{.v1 = 1, .v2 = 6, .v3 = 5}, // right
     };
 
 
@@ -150,7 +153,7 @@ pub const Window = struct {
     height: u64,
     handle: *sdl.SDL_Window,
     gl_context: *c_void,
-    projection: Mat4,
+    projection: m.Mat4,
 
     pub fn create(
         title: [*c]const u8,
@@ -165,13 +168,13 @@ pub const Window = struct {
 
         gl.glEnable(gl.GL_DEBUG_OUTPUT);
         gl.glDebugMessageCallback(glDebugMessageCallback, null);
-		gl.glEnable(gl.GL_CULL_FACE);
-        //gl.glEnable(gl.GL_DEPTH_TEST);
+		// gl.glEnable(gl.GL_CULL_FACE);
+        gl.glEnable(gl.GL_DEPTH_TEST);
 	    gl.glEnable(gl.GL_BLEND);
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA);
 
         return Window{ .width = width, .height = height, .handle = window, .gl_context = gl_ctx,
-        .projection = Mat4.perspective(1.0, @intToFloat(f32, width)/@intToFloat(f32, height), 0.01, 100.0)};
+        .projection = m.Mat4.perspective(1.0, @intToFloat(f32, width)/@intToFloat(f32, height), 0.01, 100.0)};
     }
 
     pub fn swap(self: *const Window) void {
@@ -186,7 +189,7 @@ pub const Window = struct {
     pub fn resize(self: *Window, width: u64, height: u64) void {
         self.width = width;
         self.height = height;
-        self.projection = Mat4.perspective(1.0, @intToFloat(f32, width)/@intToFloat(f32, height), 0.01, 100.0);
+        self.projection = m.Mat4.perspective(1.0, @intToFloat(f32, width)/@intToFloat(f32, height), 0.01, 100.0);
         gl.glViewport(0, 0, @intCast(c_int, width), @intCast(c_int, height));
     }
 
@@ -363,10 +366,10 @@ pub const Mesh = struct {
     EBO: u32,
 
     shader: u32,
-    model: Mat4,
+    model: m.Mat4,
     size: usize,
 
-    pub fn create(v: []const sphere.Vertex, i: []const sphere.Triangle, shader: u32, model: Mat4) !Mesh {
+    pub fn create(v: []const geometry.Vertex, i: []const geometry.Triangle, shader: u32, model: m.Mat4) !Mesh {
         var vao: u32 = undefined;
         gl.glGenVertexArrays(1, &vao);
         gl.glBindVertexArray(vao);
@@ -391,7 +394,7 @@ pub const Mesh = struct {
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo);
         gl.glBufferData(gl.GL_ARRAY_BUFFER, @intCast(c_long, floats.len * @sizeOf(f32)), floats.ptr, gl.GL_STATIC_DRAW);
         gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, ebo);
-        gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, i.len * @sizeOf(sphere.Triangle)), i.ptr, gl.GL_STATIC_DRAW);
+        gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, i.len * @sizeOf(geometry.Triangle)), i.ptr, gl.GL_STATIC_DRAW);
 
         gl.glEnableVertexAttribArray(0);
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, @sizeOf(f32)*6, null);
@@ -402,160 +405,36 @@ pub const Mesh = struct {
         return Mesh{ .VAO = vao, .VBO = vbo, .EBO = ebo, .shader = shader, .model = model, .size = i.len*3 };
     }
 
-    pub fn draw(self: *const Mesh, view: *const Mat4, proj: *const Mat4) void {
-        print("View:\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n", .{
-            view.a[0], view.a[1], view.a[2], view.a[3],
-            view.a[4], view.a[5], view.a[6], view.a[7],
-            view.a[8], view.a[9], view.a[10], view.a[11],
-            view.a[12], view.a[13], view.a[14], view.a[15],
-        });
-        print("Projection:\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n", .{
-            proj.a[0], proj.a[1], proj.a[2], proj.a[3],
-            proj.a[4], proj.a[5], proj.a[6], proj.a[7],
-            proj.a[8], proj.a[9], proj.a[10], proj.a[11],
-            proj.a[12], proj.a[13], proj.a[14], proj.a[15],
-        });
+    pub fn draw(self: *const Mesh, cam: *const m.Vec3f, view: *const m.Mat4, proj: *const m.Mat4) void {
+        // print("View:\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n", .{
+        //     view.a[0], view.a[1], view.a[2], view.a[3],
+        //     view.a[4], view.a[5], view.a[6], view.a[7],
+        //     view.a[8], view.a[9], view.a[10], view.a[11],
+        //     view.a[12], view.a[13], view.a[14], view.a[15],
+        // });
+        // print("Projection:\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n{d:.2} {d:.2} {d:.2} {d:.2}\n", .{
+        //     proj.a[0], proj.a[1], proj.a[2], proj.a[3],
+        //     proj.a[4], proj.a[5], proj.a[6], proj.a[7],
+        //     proj.a[8], proj.a[9], proj.a[10], proj.a[11],
+        //     proj.a[12], proj.a[13], proj.a[14], proj.a[15],
+        // });
 
         gl.glUseProgram(self.shader);
         gl.glUniformMatrix4fv(0, 1, gl.GL_TRUE, &self.model.a[0]);
         gl.glUniformMatrix4fv(1, 1, gl.GL_TRUE, &view.a[0]);
         gl.glUniformMatrix4fv(2, 1, gl.GL_TRUE, &proj.a[0]);
         gl.glBindVertexArray(self.VAO);
-        //print("Drawing {} vertices.\n", .{self.size});
+        // print("Drawing {} vertices.\n", .{self.size});
         
         gl.glUniform1i(3, 1);
+        gl.glUniform3f(5, cam.x, cam.y, cam.z);
+        
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL);
         gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
         
-        gl.glUniform1i(3, 0);
-        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE);
-        gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
-        gl.glBindVertexArray(0);
-    }
-};
-
-pub const Mat4 = struct {
-    a: [16]f32,
-
-    pub fn zeros() Mat4 {
-        return Mat4{
-            .a = [16]f32{
-                0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0,
-            },
-        };
-    }
-
-    pub fn identity() Mat4 {
-        return Mat4{
-            .a = [16]f32{
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
-            },
-        };
-    }
-
-    pub fn scale(scl: f32) Mat4 {
-        return Mat4{
-            .a = [16]f32{
-                scl, 0.0, 0.0, 0.0,
-                0.0, scl, 0.0, 0.0,
-                0.0, 0.0, scl, 0.0,
-                0.0, 0.0, 0.0, 1.0,
-            },
-        };
-    }
-
-    pub fn RotationXMat4(rad: f32) Mat4 {
-        var s: f32 = @sin(rad);
-        var c: f32 = @cos(rad);
-        return Mat4{
-            .a = [16]f32{
-                1,  0,  0, 0,
-                0,  c, -s, 0,
-                0,  s,  c, 0,
-                0,  0,  0, 1,
-            },
-        };
-    }
-
-    pub fn RotationYMat4(rad: f32) Mat4 {
-        var s: f32 = @sin(rad);
-        var c: f32 = @cos(rad);
-        return Mat4{
-            .a = [16]f32{
-                c, 0, s, 0,
-                0, 1, 0, 0,
-                -s, 0, c, 0,
-                0, 0, 0, 1,
-            }
-        };
-    }
-
-    pub fn RotationZMat4(rad: f32) Mat4 {
-        var s: f32 = @sin(rad);
-        var c: f32 = @cos(rad);
-        return Mat4{
-            .a = [16]f32{
-                c, -s, 0, 0,
-                s,  c, 0, 0,
-                0,  0, 1, 0,
-                0,  0, 0, 1,
-            }
-        };
-    }
-
-    pub fn lookAt(pos: p.Vec3, up: p.Vec3, target: p.Vec3) Mat4 {
-        var dir = pos.sub(target).normalize();
-        var right = up.cross(dir).normalize();
-        const cam_up = dir.cross(right);
-        return Mat4{
-            .a = [16]f32{
-                @floatCast(f32, right.x), @floatCast(f32, right.y), @floatCast(f32, right.z), -@floatCast(f32, right.dot(pos)),
-                @floatCast(f32, cam_up.x),  @floatCast(f32, cam_up.y), @floatCast(f32, cam_up.z), -@floatCast(f32, cam_up.dot(pos)),
-                @floatCast(f32, dir.x), @floatCast(f32, dir.y), @floatCast(f32, dir.z), -@floatCast(f32, dir.dot(pos)), 
-                0.0,     0.0,  0.0,       1.0,
-            },
-        };
-    }
-
-    pub fn perspective(tanY: f32, aspect: f32, near: f32, far: f32) Mat4 {
-        var tanX: f32 = tanY*aspect;
-        return Mat4{
-            .a = [16]f32 {
-                1.0 / tanX, 0.0, 0.0, 0.0,
-                0.0, 1.0 / tanY, 0.0, 0.0,
-                0.0, 0.0, -(near + far) / (far - near), -2*near*far/(far - near),
-                0.0, 0.0, -1.0, 0.0
-            }
-        };
-    }
-
-    pub fn mul(a: *const Mat4, b: *const Mat4) Mat4 {
-        var res: Mat4 = undefined;
-        var rowA: u32 = 0;
-        while(rowA < 4): (rowA += 1) {
-            var colB: u32 = 0;
-            while(colB < 4): (colB += 1) {
-                var posRes = 4*rowA + colB;
-                res.a[posRes] = 0;
-                var i: u32 = 0;
-                while(i < 4): (i += 1) {
-                    res.a[posRes] += a.a[4*rowA + i]*b.a[4*i + colB];
-                }
-            }
-        }
-        return res;
-    }
-    pub fn mulVec3(mat: *Mat4, v: *p.Vec3) p.Vec3 {
-        return p.Vec3{
-            .x = mat.a[0]*v.x + mat.a[1]*v.y + mat.a[2]*v.z,
-            .y = mat.a[4]*v.x + mat.a[5]*v.y + mat.a[6]*v.z,
-            .z = mat.a[8]*v.x + mat.a[9]*v.y + mat.a[10]*v.z,
-        };
+        // gl.glUniform1i(3, 0);
+        // gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE);
+        // gl.glDrawElements(gl.GL_TRIANGLES, @intCast(c_int, self.size), gl.GL_UNSIGNED_INT, null);
+        // gl.glBindVertexArray(0);
     }
 };

@@ -1,14 +1,11 @@
 const std = @import("std");
-
-const p = @import("Particle.zig");
-
-const c = @import("Constants.zig");
-
 const print = @import("std").debug.print;
 
+const p = @import("particle.zig");
+const m = @import("math.zig");
+const c = @import("constants.zig");
 const gui = @import("gui.zig");
-
-const s = @import("sphere.zig");
+const geometry = @import("geometry.zig");
 
 pub fn initParticles(sys: *p.System) !void {
     var prng = std.rand.DefaultPrng.init(blk: {
@@ -23,13 +20,13 @@ pub fn initParticles(sys: *p.System) !void {
     var id: p.ID = 0;
     while (id < c.NUM_PARTICLES) : (id = id + 1) {
         while (true) {
-            frame.pos[id] = p.Vec3{ .x = rand.float(f64) * @intToFloat(f64, c.BOX_WIDTH), .y = rand.float(f64) * @intToFloat(f64, c.BOX_HEIGHT), .z = rand.float(f64) * @intToFloat(f64, c.BOX_LENGTH) };
-            frame.vel[id] = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
-            frame.frc[id] = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
+            frame.pos[id] = m.Vec3d{ .x = rand.float(f64) * @intToFloat(f64, c.BOX_WIDTH), .y = rand.float(f64) * @intToFloat(f64, c.BOX_HEIGHT), .z = rand.float(f64) * @intToFloat(f64, c.BOX_LENGTH) };
+            frame.vel[id] = m.Vec3d{ .x = 0.0, .y = 0.0, .z = 0.0 };
+            frame.frc[id] = m.Vec3d{ .x = 0.0, .y = 0.0, .z = 0.0 };
             sys.m[id] = 1.0;
             var valid: bool = true;
             for (frame.pos[0..id]) |p2| {
-                var dist = frame.pos[id].periodicDistanceVector(p2).valueSquare();
+                var dist = p.periodicDistanceVector(&frame.pos[id], &p2).valueSquare();
                 if (dist < 1.1) {
                     valid = false;
                     break;
@@ -67,8 +64,8 @@ pub fn exportData(sys: *p.System) !void {
 
     for (sys.snapshots) |snsh, idx| {
         var currentEnergy: f64 = 0;
-        var currentMomentum: p.Vec3 = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
-        var currentAngularMomentum: p.Vec3 = p.Vec3{ .x = 0.0, .y = 0.0, .z = 0.0 };
+        var currentMomentum: m.Vec3d = m.Vec3d{ .x = 0.0, .y = 0.0, .z = 0.0 };
+        var currentAngularMomentum: m.Vec3d = m.Vec3d{ .x = 0.0, .y = 0.0, .z = 0.0 };
 
         _ = try xyz.writer().print("{}\n Snapshot {} (Frame {})\n", .{ c.NUM_PARTICLES + 8, idx, idx * 1000 });
         var id: p.ID = 0;
@@ -121,10 +118,67 @@ pub fn runSimulation() !void {
     print("{}B in {}ms: {}GB/s\n", .{ data, @intToFloat(f64, t2 - t1) / 1000000.0, @intToFloat(f64, data) / @intToFloat(f64, t2 - t1) });
 }
 
+fn printMe(a: []const u8) void {
+    print("{s}", .{a});
+}
+
+fn runme(a: []const u8, b: fn([]const u8) void) void {
+    b(a);
+}
+
 const TEST = true;
 
+fn fac(k: u64) u64 {
+    var i: u64 = 2;
+    var out: u64 = 1;
+    while(i <= k) : (i += 1) {
+        out *= i;
+    }
+    return out;
+}
+
+fn choose(n: u64, k: u64) u64 {
+    // print("{} over {}: {} / {}", .{n, k, fac(n), fac(k) * fac(n-k)});
+    return @divExact(fac(n), fac(k) * fac(n - k));
+}
+
+fn chebishev(comptime n: usize, x: f32) f32 {
+    var k: usize = 0;
+    var out: f32 = 0;
+    while(k <= @divFloor(n, 2)) : (k += 1) {
+        out += @intToFloat(f32, choose(n, 2 * k)) * std.math.pow(f32, x * x - 1, @intToFloat(f32, k)) * std.math.pow(f32, x, @intToFloat(f32, n - 2 * k));
+    }
+    return out;
+}
+
+fn field(x: f32, y: f32, z: f32) f32 {
+    const order = 6;
+    _ = x;
+    _ = y;
+    _ = z;
+    // return 10.0;
+    // return x * x + y * y + z * z;
+    return chebishev(order, x) + chebishev(order, y) + chebishev(order, z);
+}
+
+fn field2(x: f32, y: f32, z: f32) f32 {
+    const x0 = 0.0;
+    const y0 = 0.0;
+    const z0 = 0.0;
+    const r0 = 1.3;
+
+    const x1 = -0.8;
+    const y1 = -0.8;
+    const z1 = -0.8;
+    const r1 = 1.3;
+
+    return (r0 * r0 + r1 * r1) - (1 / ((x - x0) * (x - x0) + (y - y0) * (y - y0) + (z - z0) * (z - z0))
+        + 1 / ((x - x1) * (x - x1) + (y - y1) * (y - y1) + (z - z1) * (z - z1)));
+}
+
 pub fn main() !void {
-   
+
+
     try gui.initGUI();
     defer gui.quitGUI();
     
@@ -133,29 +187,19 @@ pub fn main() !void {
     win.show();
     gui.Window.clearColor(0.0, 0.3, 0.2, 1.0);
  
-    const model = gui.Mat4.identity();
+    const model = m.Mat4.identity();
 
-<<<<<<< HEAD
-    var pos = p.Vec3{.x = 1.0, .y = 1.0, .z = 1.0}; // pos
-=======
-    var pos = p.Vec3{.x = 5.0, .y = 0.0, .z = 0.0}; // pos
->>>>>>> 8a0d89377fa5ff8162bb56c2890a6afbd1be1be3
-    var up = p.Vec3{.x = 0.0, .y = 0.0, .z = 1.0};  // up
-    var look_at = p.Vec3{.x = 0.0, .y = 0.0, .z = 0.0}; // forward
-    var view = gui.Mat4.lookAt(pos, up, look_at);
-
-<<<<<<< HEAD
-    const perspective = gui.Mat4.perspective(3.0, 3.0, 0.01, 100.0);
-=======
-    const sh = try gui.Shader.create("shader.vert", "shader.frag");
->>>>>>> 8a0d89377fa5ff8162bb56c2890a6afbd1be1be3
+    var pos = m.Vec3f{.x = 5.0, .y = 0.0, .z = 0.0}; // pos
+    var up = m.Vec3f{.x = 0.0, .y = 0.0, .z = 1.0};  // up
+    var look_at = m.Vec3f{.x = 0.0, .y = 0.0, .z = 0.0}; // forward
+    var view = m.Mat4.lookAt(pos, up, look_at);
 
     var sh = try gui.Shader.create();//  ("shader.vert", "shader.frag");
     try sh.addShader("shader.vert", gui.ShaderStage.VERTEX);
     try sh.addShader("shader.frag", gui.ShaderStage.FRAGMENT);
     try sh.compile();
 
-    const sphere_struct = s.sphere(0);
+    const sphere_struct = geometry.Sphere(2);
 
     var sphere_data : sphere_struct = undefined;
     sphere_data.init();
@@ -165,15 +209,25 @@ pub fn main() !void {
     // sphere_mesh.draw();
     // win.swap();
 
+    const t1 = std.time.nanoTimestamp();
+    const surface1 = try geometry.marchingTetrahedra(&field, 0.0, 100, 100, 100, m.Vec3f{.x = -3.0, .y = -3.0, .z = -3.0}, 0.05);
+    const surface2 = try geometry.marchingTetrahedra(&field2, 0.0, 100, 100, 100, m.Vec3f{.x = -3.0, .y = -3.0, .z = -3.0}, 0.05);
+    const t2 = std.time.nanoTimestamp();
+    print("Generated surface(s) in {} milliseconds.\n", .{@divTrunc(t2 - t1, 1000000)});
+    
+    const surface1_obj = try gui.Mesh.create(surface1.vs, surface1.ts, sh.id, model);
+    const surface2_obj = try gui.Mesh.create(surface2.vs, surface2.ts, sh.id, m.Mat4.translate(m.Vec3f{.x = -1.0, .y = -1.0, .z = 3.0}));
+
+
     var line_shader = try gui.Shader.create(); // ("line.vert", "line.frag");
     try line_shader.addShader("line.vert", gui.ShaderStage.VERTEX);
     try line_shader.addShader("line.frag", gui.ShaderStage.FRAGMENT);
     try line_shader.compile();
 
     const d: f32 = 2.0;
-    const xaxis = gui.Line.create(p.Vec3{.x = -d, .y = 0.0, .z = 0.0}, p.Vec3{.x = d, .y = 0.0, .z = 0.0}, [3]f32{1.0, 0.0, 0.0}, line_shader.id);
-    const yaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = -d, .z = 0.0}, p.Vec3{.x = 0.0, .y = d, .z = 0.0}, [3]f32{0.0, 1.0, 0.0}, line_shader.id);
-    const zaxis = gui.Line.create(p.Vec3{.x = 0.0, .y = 0.0, .z = -d}, p.Vec3{.x = 0.0, .y = 0.0, .z = d}, [3]f32{0.0, 0.0, 1.0}, line_shader.id);
+    const xaxis = gui.Line.create(m.Vec3f{.x = -d, .y = 0.0, .z = 0.0}, m.Vec3f{.x = d, .y = 0.0, .z = 0.0}, [3]f32{1.0, 0.0, 0.0}, line_shader.id);
+    const yaxis = gui.Line.create(m.Vec3f{.x = 0.0, .y = -d, .z = 0.0}, m.Vec3f{.x = 0.0, .y = d, .z = 0.0}, [3]f32{0.0, 1.0, 0.0}, line_shader.id);
+    const zaxis = gui.Line.create(m.Vec3f{.x = 0.0, .y = 0.0, .z = -d}, m.Vec3f{.x = 0.0, .y = 0.0, .z = d}, [3]f32{0.0, 0.0, 1.0}, line_shader.id);
 
     const cube = try gui.cube(sh.id, model);
 
@@ -239,13 +293,17 @@ pub fn main() !void {
         yaxis.draw(&view, &win.projection);
         zaxis.draw(&view, &win.projection);
         _ = sphere_mesh;
-        sphere_mesh.draw(&view, &win.projection);
+        // sphere_mesh.draw(&pos, &view, &win.projection);
         //cube.draw(&view, &win.projection);
+        _ = surface1_obj;
+        surface1_obj.draw(&pos, &view, &win.projection);
+        surface2_obj.draw(&pos, &view, &win.projection);
+
         _ = cube;
         win.swap();
         // pos.z += 0.5;
-        var rotation: gui.Mat4 = gui.Mat4.RotationZMat4(-rotX).mul(
-            &gui.Mat4.RotationYMat4(-rotY));
-        view = gui.Mat4.lookAt(rotation.mulVec3(&pos), up, look_at);
+        var rotation: m.Mat4 = m.Mat4.rotateZ(-rotX).mul(
+            &m.Mat4.rotateY(-rotY));
+        view = m.Mat4.lookAt(rotation.mulVec3(&pos), up, look_at);
     }
 }
