@@ -189,7 +189,7 @@ pub fn main() !void {
  
     const model = m.Mat4.identity();
 
-    var pos = m.Vec3f{.x = 5.0, .y = 0.0, .z = 0.0}; // pos
+    var pos = m.Vec3f{.x = 1.0, .y = 0.0, .z = 0.0}; // pos
     var up = m.Vec3f{.x = 0.0, .y = 0.0, .z = 1.0};  // up
     var look_at = m.Vec3f{.x = 0.0, .y = 0.0, .z = 0.0}; // forward
     var view = m.Mat4.lookAt(pos, up, look_at);
@@ -237,6 +237,7 @@ pub fn main() !void {
 
     var rotX: f32 = 0;
     var rotY: f32 = 0;
+    var zoom: f32 = 5.0;
 
     var ev: gui.sdl.SDL_Event = undefined;
     main_loop: while (true) {
@@ -277,9 +278,21 @@ pub fn main() !void {
                         // Update camera:
                         rotX += @intToFloat(f32, newMouseX - mouseX)*0.01;
                         rotY += @intToFloat(f32, newMouseY - mouseY)*0.01;
+                        rotY = std.math.max(rotY, -std.math.pi/2.0 + 0.01);
+                        rotY = std.math.min(rotY, std.math.pi/2.0 - 0.01);
                     }
                     mouseX = newMouseX;
                     mouseY = newMouseY;
+                },
+                gui.sdl.SDL_MOUSEWHEEL => {
+                    while(ev.wheel.y > 0) { // scroll up
+                        zoom /= 1.1;
+                        ev.wheel.y -= 1;
+                    }
+                    while(ev.wheel.y < 0) { // scroll down
+                        zoom *= 1.1;
+                        ev.wheel.y += 1;
+                    }
                 },
                 else => {}
             }
@@ -304,6 +317,6 @@ pub fn main() !void {
         // pos.z += 0.5;
         var rotation: m.Mat4 = m.Mat4.rotateZ(-rotX).mul(
             &m.Mat4.rotateY(-rotY));
-        view = m.Mat4.lookAt(rotation.mulVec3(&pos), up, look_at);
+        view = m.Mat4.lookAt(rotation.mulVec3(&pos).scale(zoom), up, look_at);
     }
 }

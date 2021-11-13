@@ -16,10 +16,15 @@ return packed struct {
 		pub fn mul(u: *const @This(), a: T) @This() {
 			return @This(){.x = u.x*a, .y = u.y*a, .z = u.z*a};
 		}
-		pub fn scaledAdd(u: *const @This(), v: *const @This(), scale : T) @This() {
-			return @This(){.x = u.x + scale * v.x,
-						.y = u.y + scale * v.y,
-						.z = u.z + scale * v.z};
+		pub fn scaledAdd(u: *const @This(), v: *const @This(), s : T) @This() {
+			return @This(){.x = u.x + s * v.x,
+						.y = u.y + s * v.y,
+						.z = u.z + s * v.z};
+		}
+		pub fn scale(u: *const @This(), s : T) @This() {
+			return @This(){.x = s * u.x,
+						.y = s * u.y,
+						.z = s * u.z};
 		}
 		pub fn dist(u: *const @This(), v: *const @This()) T {
 			return @sqrt((u.x - v.x) * (u.x - v.x) + (u.y - v.y) * (u.y - v.y) + (u.z - v.z) * (u.z - v.z));
