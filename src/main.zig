@@ -27,7 +27,7 @@ pub fn initParticles(sys: *p.System) !void {
             var valid: bool = true;
             for (frame.pos[0..id]) |p2| {
                 var dist = p.periodicDistanceVector(&frame.pos[id], &p2).valueSquare();
-                if (dist < 1.1) {
+                if (dist < 1.5) {
                     valid = false;
                     break;
                 }
@@ -82,14 +82,14 @@ pub fn exportData(sys: *p.System) !void {
             _ = try xyz.writer().print("Ar\t{}\t{}\t{}\n", .{ snsh.pos[id].x, snsh.pos[id].y, snsh.pos[id].z });
 
             currentEnergy += snsh.vel[id].valueSquare() / (2.0 * sys.m[id]);
-            currentMomentum = currentMomentum.scaledAdd(snsh.vel[id], sys.m[id]);
-            currentAngularMomentum = currentAngularMomentum.scaledAdd(snsh.vel[id].cross(snsh.pos[id]), sys.m[id]);
+            currentMomentum = currentMomentum.scaledAdd(&snsh.vel[id], sys.m[id]);
+            currentAngularMomentum = currentAngularMomentum.scaledAdd(&snsh.vel[id].cross(&snsh.pos[id]), sys.m[id]);
         }
         currentEnergy += p.calcTotalPotential(snsh);
         _ = try csv.writer().print("{}, {}, {}, {}, {}, {}, {}, {} \n", .{ @intToFloat(f64, idx * 1000) * c.DELTA_TIME, currentEnergy, currentMomentum.x, currentMomentum.y, currentMomentum.z, currentAngularMomentum.x, currentAngularMomentum.y, currentAngularMomentum.z });
     }
 }
-pub fn runSimulation() !void {
+pub fn runSimulation() !*p.System {
     // Simulation
     var sys = try initSystem();
     var i: u32 = 0;
@@ -116,6 +116,9 @@ pub fn runSimulation() !void {
     var t2 = std.time.nanoTimestamp();
     const data = @intCast(u64, c.NUM_STEPS) * @intCast(u64, @sizeOf(p.Frame));
     print("{}B in {}ms: {}GB/s\n", .{ data, @intToFloat(f64, t2 - t1) / 1000000.0, @intToFloat(f64, data) / @intToFloat(f64, t2 - t1) });
+    // try exportData(sys);
+
+    return sys;
 }
 
 fn printMe(a: []const u8) void {
@@ -204,7 +207,7 @@ pub fn main() !void {
     var sphere_data : sphere_struct = undefined;
     sphere_data.init();
     _ = sphere_struct;
-    const sphere_mesh = try gui.Mesh.create(&sphere_data.vertices, &sphere_data.indices, sh.id, model);
+    var sphere_mesh = try gui.Mesh.create(&sphere_data.vertices, &sphere_data.indices, sh.id, model);
     // gui.Window.clear();
     // sphere_mesh.draw();
     // win.swap();
@@ -215,8 +218,12 @@ pub fn main() !void {
     const t2 = std.time.nanoTimestamp();
     print("Generated surface(s) in {} milliseconds.\n", .{@divTrunc(t2 - t1, 1000000)});
     
+
     const surface1_obj = try gui.Mesh.create(surface1.vs, surface1.ts, sh.id, model);
     const surface2_obj = try gui.Mesh.create(surface2.vs, surface2.ts, sh.id, m.Mat4.translate(m.Vec3f{.x = -1.0, .y = -1.0, .z = 3.0}));
+
+    _ = surface1_obj;
+    _ = surface2_obj;
 
 
     var line_shader = try gui.Shader.create(); // ("line.vert", "line.frag");
@@ -231,6 +238,9 @@ pub fn main() !void {
 
     const cube = try gui.cube(sh.id, model);
 
+    const sys = try runSimulation();
+    
+
     var pressedLeftButton: bool = false;
     var mouseX: c_int = 0;
     var mouseY: c_int = 0;
@@ -239,7 +249,13 @@ pub fn main() !void {
     var rotY: f32 = 0;
     var zoom: f32 = 5.0;
 
+    var i: isize = 0;
+    var i_inc: isize = 1;
+    var running: bool = true;
+
     var ev: gui.sdl.SDL_Event = undefined;
+    var current: i128 = 0;
+    var past:i128 = std.time.nanoTimestamp();
     main_loop: while (true) {
         // window event loop
         while (gui.sdl.SDL_PollEvent(&ev) != 0) {
@@ -256,8 +272,35 @@ pub fn main() !void {
                     }
                 },
                 gui.sdl.SDL_KEYDOWN => {
-                    if((ev.key.keysym.sym == gui.sdl.SDLK_q) or (ev.key.keysym.sym == gui.sdl.SDLK_ESCAPE)) {
-                        break :main_loop;
+                    switch(ev.key.keysym.sym) {
+                        gui.sdl.SDLK_q, gui.sdl.SDLK_ESCAPE => {
+                            break :main_loop;
+                        },
+                        gui.sdl.SDLK_SPACE => {
+                            running = !running;
+                        },
+                        gui.sdl.SDLK_r => {
+                            running = false;
+                            i = 0;
+                            i_inc = 1;
+                        },
+                        gui.sdl.SDLK_UP => {
+                            i_inc += 1;                        
+                            print("Increment: {}\n", .{i_inc});
+                        },
+                        gui.sdl.SDLK_DOWN, gui.sdl.SDLK_KP_MINUS => {
+                            i_inc -= 1;
+                            print("Increment: {}\n", .{i_inc});
+                        },
+                        gui.sdl.SDLK_LEFT => {
+                            i -= 1;
+                        },
+                        gui.sdl.SDLK_RIGHT => {
+                            i += 1;
+                        },
+                        else => {
+                            print("Unhandled key: {}\n", .{ev.key.keysym.sym});
+                        }
                     }
                 },
                 gui.sdl.SDL_MOUSEBUTTONDOWN => {
@@ -312,11 +355,33 @@ pub fn main() !void {
         var rotation: m.Mat4 = m.Mat4.rotateZ(-rotX).mul(
             &m.Mat4.rotateY(-rotY));
         var transformedPos = rotation.mulVec3(&pos).scale(zoom);
-        surface1_obj.draw(&transformedPos, &view, &win.projection);
-        surface2_obj.draw(&transformedPos, &view, &win.projection);
+        // surface1_obj.draw(&transformedPos, &view, &win.projection);
+        // surface2_obj.draw(&transformedPos, &view, &win.projection);
+        // print("Drawing Snapshot {}\n", .{i});
+        var buf: [256]u8 = undefined;
+        var stream = std.io.fixedBufferStream(&buf);
+        try stream.writer().print("Snapshot {}\x00", .{i});
+        gui.sdl.SDL_SetWindowTitle(win.handle, @ptrCast([*c]u8, stream.getWritten()));
+        for(sys.snapshots[@intCast(usize, i)].pos) |*position| {
+            sphere_mesh.model = m.Mat4.translate(m.Vec3f{
+                .x = @floatCast(f32, position.x - (@intToFloat(f64, c.BOX_LENGTH) / 2)), 
+                .y = @floatCast(f32, position.y - (@intToFloat(f64, c.BOX_WIDTH) / 2)), 
+                .z = @floatCast(f32, position.z - (@intToFloat(f64, c.BOX_HEIGHT) / 2))}).mul(&m.Mat4.scale(0.2));
+            sphere_mesh.draw(&transformedPos, &view, &win.projection);
+        }
 
+        if(running){
+            i += i_inc;
+            if(i >= sys.snapshots.len) i = 0;
+            if(i < 0) i = sys.snapshots.len - 1;
+        }
         _ = cube;
         win.swap();
+        current = std.time.nanoTimestamp();
+        const dt: u64 = 50000000;
+        std.time.sleep(@minimum(dt, dt -% @intCast(u64, current-past)));
+        past = current;
+
         // pos.z += 0.5;
         view = m.Mat4.lookAt(transformedPos, up, look_at);
     }

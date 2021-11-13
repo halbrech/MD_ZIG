@@ -74,7 +74,7 @@ pub fn forceBetween(pos: [] m.Vec3d, frc: [] m.Vec3d, a: ID, b: ID) void {
 	var d2 : f64 = dist.valueSquare();
 	var force : f64 = calcForce(d2);
 	frc[a] = frc[a].scaledAdd(&dist, force);
-	frc[b] = frc[a].scaledAdd(&dist, -force);
+	frc[b] = frc[b].scaledAdd(&dist, -force);
 }
 
 // Verlet propagation
